@@ -1,3 +1,5 @@
+"use client";
+
 import CategoriaTab from "@/components/CategoriaTab";
 
 export default function MulheresPage() {

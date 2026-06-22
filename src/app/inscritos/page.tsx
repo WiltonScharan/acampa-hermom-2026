@@ -162,7 +162,7 @@ export default function InscritosPage() {
                     <td className="px-4 py-3 font-medium text-gray-900">
                       <span className="flex items-center gap-2">
                         {ins.nome}
-                        {ins.onibus && <Bus size={14} className="text-primary-500" title="Vai de ônibus" />}
+                        {ins.onibus && <Bus size={14} className="text-primary-500" aria-label="Vai de ônibus" />}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-gray-600">{ins.nomeComprador}</td>

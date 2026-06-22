@@ -48,7 +48,7 @@ function TabelaGrupo({ titulo, inscritos }: { titulo: string; inscritos: Inscric
                   <td className="py-2.5 pr-3 font-medium text-gray-900">
                     <span className="flex items-center gap-1.5">
                       {ins.nome}
-                      {ins.onibus && <Bus size={13} className="text-primary-500" title="Ônibus" />}
+                      {ins.onibus && <Bus size={13} className="text-primary-500" aria-label="Ônibus" />}
                     </span>
                   </td>
                   <td className="py-2.5 pr-3 text-gray-500">
