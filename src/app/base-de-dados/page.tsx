@@ -15,37 +15,48 @@ function norm(s: string) {
 
 function mapearColuna(col: string): string | null {
   const n = norm(col);
+  if (!n) return null;
+
+  // --- Skip list ---
   if (n === "usado") return null;
-  if (n === "codigo" || n === "código") return null;
-  if (n.includes(" comprador")) return null;
+  if (n === "codigo") return null;
+  if (n.includes(" comprador")) return null;   // "e-mail do comprador" etc (not "comprador" itself)
   if (n.includes("igreja") || n.includes("regional")) return null;
   if (n === "status") return null;
-  if (n === "cupom") return null;
-  if (n.includes("transac") || n.includes("transaç") || n.startsWith("id da")) return null;
+  if (n === "cupom" && !n.includes("preco")) return null;
+  if (n.includes("transac") || n.startsWith("id da")) return null;
   if (n === "parcelas") return null;
   if (n.includes("data da compra") || n.includes("data do pedido")) return null;
-  if (n.includes("lider") || n.includes("líder")) return null;
+  if (n.includes("lider")) return null;
   if (n === "email" || n === "e-mail") return null;
 
+  // --- Exact matches (our template) ---
   if (n === "comprador") return "nomeComprador";
   if (n === "nome") return "nome";
   if (n === "cpf") return "cpf";
   if (n === "celular") return "telefone";
+  if (n === "telefone") return "telefone";
   if (n === "tipo") return "tipoQuarto";
-  if (n === "genero" || n === "gênero" || n === "sexo") return "genero";
-  if (n.includes("nascimento")) return "dataNascimento";
-  if (n.includes("transporte")) return "onibus";
-  if (n.includes("metodo") || n.includes("método")) return "formaPagamento";
-  if (n.includes("preco") && n.includes("cupom")) return "valorPago";
+  if (n === "genero" || n === "sexo") return "genero";
   if (n === "nomecomprador") return "nomeComprador";
   if (n === "datanascimento") return "dataNascimento";
   if (n === "tipoquarto") return "tipoQuarto";
-  if (n === "telefone") return "telefone";
   if (n === "onibus") return "onibus";
   if (n === "valortotal") return "valorTotal";
   if (n === "valorpago") return "valorPago";
   if (n === "formapagamento") return "formaPagamento";
-  if (n === "observacoes" || n === "observações") return "observacoes";
+  if (n === "observacoes") return "observacoes";
+
+  // --- Flexible matches (handles "Nome Completo", "Nome Co CPF", etc.) ---
+  if (n.includes("nome") && !n.includes("comprador")) return "nome";
+  if (n.includes("cpf")) return "cpf";
+  if (n.includes("nascimento")) return "dataNascimento";
+  if (n.includes("transporte")) return "onibus";
+  if (n.includes("metodo") || n.includes("forma") && n.includes("pag")) return "formaPagamento";
+  if (n.includes("preco") && n.includes("cupom")) return "valorPago";
+  if (n.includes("celular") || n.includes("fone")) return "telefone";
+  if (n.includes("genero") || n.includes("sexo")) return "genero";
+
   return null;
 }
 
@@ -68,7 +79,10 @@ function converterData(v: string): string {
 
 type LinhaRaw = Record<string, string>;
 
+let _ultimosHeadersBrutos: string[] = [];
+
 function parseLinhas(cabecalho: string[], valores: string[][]): LinhaRaw[] {
+  _ultimosHeadersBrutos = cabecalho.filter(Boolean);
   return valores.filter((cols) => cols.some((c) => c.trim())).map((cols) => {
     const obj: LinhaRaw = {};
     cabecalho.forEach((col, i) => {
@@ -167,8 +181,10 @@ export default function BaseDadosPage() {
   const [arrastando, setArrastando] = useState(false);
   const [totalImportados, setTotalImportados] = useState<number | null>(null);
   const [excluindo, setExcluindo] = useState(false);
+  const [headersBrutos, setHeadersBrutos] = useState<string[]>([]);
 
   async function processarLinhas(linhas: LinhaRaw[]) {
+    setHeadersBrutos([..._ultimosHeadersBrutos]);
     if (!linhas.length) return;
     setVerificando(true);
     setResultados([]);
@@ -520,6 +536,26 @@ export default function BaseDadosPage() {
               ))}
             </div>
           </div>
+
+          {/* Diagnóstico: mostra quando todos falharam */}
+          {sucessos === 0 && headersBrutos.length > 0 && (
+            <div className="card bg-yellow-50 border-yellow-200">
+              <p className="text-sm font-semibold text-yellow-800 mb-2">
+                Diagnóstico — colunas detectadas no arquivo ({headersBrutos.length}):
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {headersBrutos.map((h, i) => (
+                  <span key={i} className="text-xs bg-white border border-yellow-300 text-yellow-800 px-2 py-0.5 rounded-full font-mono">
+                    {h || "(vazio)"}
+                  </span>
+                ))}
+              </div>
+              <p className="text-xs text-yellow-700 mt-2">
+                Envie essa lista para verificar qual coluna contém o Nome e a Data de Nascimento.
+              </p>
+            </div>
+          )}
+
           <button onClick={limpar} className="btn-secondary">Carregar outro arquivo</button>
         </div>
       )}
