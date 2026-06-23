@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { uploadComprovante, excluirComprovante } from "@/lib/storage";
 import { atualizarComprovantes } from "@/lib/firestore";
-import { Upload, Trash2, FileText, ExternalLink } from "lucide-react";
+import { Plus, Trash2, ExternalLink, Link } from "lucide-react";
 
 interface Props {
   inscricaoId: string;
@@ -11,38 +10,37 @@ interface Props {
   onUpdate: (urls: string[]) => void;
 }
 
-export default function UploadComprovantes({ inscricaoId, comprovantes, onUpdate }: Props) {
-  const [uploading, setUploading] = useState(false);
+export default function Comprovantes({ inscricaoId, comprovantes, onUpdate }: Props) {
+  const [novoLink, setNovoLink] = useState("");
+  const [salvando, setSalvando] = useState(false);
 
-  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files || []);
-    if (!files.length) return;
-    setUploading(true);
+  async function handleAdicionar() {
+    const link = novoLink.trim();
+    if (!link) return;
+    setSalvando(true);
     try {
-      const urls = await Promise.all(files.map((f) => uploadComprovante(inscricaoId, f)));
-      const novasUrls = [...comprovantes, ...urls];
-      await atualizarComprovantes(inscricaoId, novasUrls);
-      onUpdate(novasUrls);
+      const novas = [...comprovantes, link];
+      await atualizarComprovantes(inscricaoId, novas);
+      onUpdate(novas);
+      setNovoLink("");
     } finally {
-      setUploading(false);
-      e.target.value = "";
+      setSalvando(false);
     }
   }
 
-  async function handleExcluir(url: string) {
-    if (!confirm("Excluir este comprovante?")) return;
-    await excluirComprovante(url);
-    const novas = comprovantes.filter((u) => u !== url);
+  async function handleExcluir(link: string) {
+    if (!confirm("Remover este comprovante?")) return;
+    const novas = comprovantes.filter((u) => u !== link);
     await atualizarComprovantes(inscricaoId, novas);
     onUpdate(novas);
   }
 
-  function nomeArquivo(url: string) {
+  function labelLink(link: string) {
     try {
-      const decoded = decodeURIComponent(url.split("/o/")[1].split("?")[0]);
-      return decoded.split("/").pop() || "Comprovante";
+      const url = new URL(link);
+      return url.hostname.replace("www.", "") + url.pathname.slice(0, 30);
     } catch {
-      return "Comprovante";
+      return link.slice(0, 50);
     }
   }
 
@@ -52,46 +50,61 @@ export default function UploadComprovantes({ inscricaoId, comprovantes, onUpdate
         <h4 className="text-sm font-semibold text-gray-700">
           Comprovantes ({comprovantes.length})
         </h4>
-        <label className="btn-secondary text-sm cursor-pointer flex items-center gap-2">
-          <Upload size={14} />
-          {uploading ? "Enviando..." : "Adicionar"}
-          <input
-            type="file"
-            className="hidden"
-            multiple
-            accept="image/*,.pdf"
-            onChange={handleUpload}
-            disabled={uploading}
-          />
-        </label>
       </div>
 
+      {/* Campo para adicionar link */}
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Link size={15} className="absolute left-3 top-2.5 text-gray-400" />
+          <input
+            type="url"
+            className="input-field pl-9 text-sm"
+            placeholder="Cole o link do comprovante (Google Drive, WhatsApp...)"
+            value={novoLink}
+            onChange={(e) => setNovoLink(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleAdicionar()}
+          />
+        </div>
+        <button
+          onClick={handleAdicionar}
+          disabled={!novoLink.trim() || salvando}
+          className="btn-primary flex items-center gap-1.5 text-sm"
+        >
+          <Plus size={15} />
+          {salvando ? "Salvando..." : "Adicionar"}
+        </button>
+      </div>
+
+      <p className="text-xs text-gray-400">
+        Compartilhe o arquivo no Google Drive (com link ativo) e cole o link aqui.
+      </p>
+
       {comprovantes.length === 0 && (
-        <p className="text-sm text-gray-400 italic">Nenhum comprovante anexado.</p>
+        <p className="text-sm text-gray-400 italic">Nenhum comprovante vinculado ainda.</p>
       )}
 
       <div className="space-y-2">
-        {comprovantes.map((url) => (
+        {comprovantes.map((link, idx) => (
           <div
-            key={url}
+            key={idx}
             className="flex items-center gap-3 p-2.5 bg-gray-50 rounded-lg border border-gray-200"
           >
-            <FileText size={16} className="text-primary-500 flex-shrink-0" />
-            <span className="text-sm text-gray-700 truncate flex-1">{nomeArquivo(url)}</span>
+            <Link size={15} className="text-primary-500 flex-shrink-0" />
+            <span className="text-sm text-gray-700 truncate flex-1">{labelLink(link)}</span>
             <div className="flex gap-2">
               <a
-                href={url}
+                href={link}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary-600 hover:text-primary-800"
-                title="Abrir"
+                title="Abrir link"
               >
                 <ExternalLink size={15} />
               </a>
               <button
-                onClick={() => handleExcluir(url)}
+                onClick={() => handleExcluir(link)}
                 className="text-red-500 hover:text-red-700"
-                title="Excluir"
+                title="Remover"
               >
                 <Trash2 size={15} />
               </button>
