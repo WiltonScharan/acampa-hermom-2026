@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import * as XLSX from "xlsx";
-import { criarInscricao, listarInscricoes } from "@/lib/firestore";
+import { criarInscricao, listarInscricoes, contarInscricoesImportadas, excluirInscricoesImportadas } from "@/lib/firestore";
 import { calcularValorTotal } from "@/lib/utils";
 import { InscricaoForm, TipoQuarto, Genero } from "@/types";
-import { Upload, CheckCircle, AlertCircle, Download, Info, Users, UserCheck } from "lucide-react";
+import { Upload, CheckCircle, AlertCircle, Download, Info, Users, UserCheck, Trash2 } from "lucide-react";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -148,6 +148,7 @@ function converterLinha(row: LinhaRaw): InscricaoForm | null {
     ehComprador: !row.nomeComprador || row.nomeComprador === nome,
     tipoQuarto, onibus, valorTotal, valorPago, formaPagamento,
     status: "pendente", observacoes: row.observacoes || "",
+    origemImportacao: true,
   };
 }
 
@@ -164,6 +165,8 @@ export default function BaseDadosPage() {
   const [aba, setAba] = useState<"upload" | "colar">("upload");
   const [texto, setTexto] = useState("");
   const [arrastando, setArrastando] = useState(false);
+  const [totalImportados, setTotalImportados] = useState<number | null>(null);
+  const [excluindo, setExcluindo] = useState(false);
 
   async function processarLinhas(linhas: LinhaRaw[]) {
     if (!linhas.length) return;
@@ -264,6 +267,23 @@ export default function BaseDadosPage() {
     setNovas([]); setExistentes([]); setResultados([]); setTexto("");
   }
 
+  async function verificarImportados() {
+    const total = await contarInscricoesImportadas();
+    setTotalImportados(total);
+  }
+
+  async function handleExcluirImportados() {
+    if (!confirm(`Excluir ${totalImportados} inscrito(s) importados via planilha? Quem foi cadastrado manualmente não será afetado.`)) return;
+    setExcluindo(true);
+    try {
+      const removidos = await excluirInscricoesImportadas();
+      alert(`${removidos} inscrito(s) removido(s) com sucesso.`);
+      setTotalImportados(0);
+    } finally {
+      setExcluindo(false);
+    }
+  }
+
   const colunasMapeadas = novas.length > 0
     ? Object.keys(novas[0]).filter((k) => LABELS[k])
     : existentes.length > 0
@@ -284,6 +304,41 @@ export default function BaseDadosPage() {
         <button onClick={baixarModelo} className="btn-secondary flex items-center gap-2 text-sm">
           <Download size={15} /> Baixar Modelo CSV
         </button>
+      </div>
+
+      {/* Gerenciar importados */}
+      <div className="card border-red-100 bg-red-50">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="font-semibold text-red-800 text-sm flex items-center gap-2">
+              <Trash2 size={15} /> Excluir inscritos importados via planilha
+            </p>
+            <p className="text-xs text-red-600 mt-0.5">
+              Remove apenas quem foi importado pela planilha. Cadastros manuais não são afetados.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {totalImportados === null ? (
+              <button onClick={verificarImportados} className="btn-secondary text-xs py-1.5">
+                Verificar total
+              </button>
+            ) : totalImportados === 0 ? (
+              <span className="text-xs text-gray-500">Nenhum inscrito importado.</span>
+            ) : (
+              <>
+                <span className="text-sm font-semibold text-red-700">{totalImportados} inscrito(s)</span>
+                <button
+                  onClick={handleExcluirImportados}
+                  disabled={excluindo}
+                  className="btn-secondary text-xs py-1.5 text-red-600 hover:text-red-800 border-red-300 hover:border-red-500"
+                >
+                  <Trash2 size={13} className="inline mr-1" />
+                  {excluindo ? "Excluindo..." : "Excluir todos"}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Info */}

@@ -8,8 +8,10 @@ import {
   deleteDoc,
   query,
   orderBy,
+  where,
   serverTimestamp,
   onSnapshot,
+  writeBatch,
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { Inscricao, InscricaoForm } from "@/types";
@@ -58,6 +60,21 @@ export async function atualizarInscricao(
 
 export async function excluirInscricao(id: string): Promise<void> {
   await deleteDoc(doc(db, COLLECTION, id));
+}
+
+export async function contarInscricoesImportadas(): Promise<number> {
+  const q = query(collection(db, COLLECTION), where("origemImportacao", "==", true));
+  const snap = await getDocs(q);
+  return snap.size;
+}
+
+export async function excluirInscricoesImportadas(): Promise<number> {
+  const q = query(collection(db, COLLECTION), where("origemImportacao", "==", true));
+  const snap = await getDocs(q);
+  const batch = writeBatch(db);
+  snap.docs.forEach((d) => batch.delete(d.ref));
+  await batch.commit();
+  return snap.size;
 }
 
 export async function atualizarComprovantes(

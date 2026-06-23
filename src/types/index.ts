@@ -41,6 +41,7 @@ export interface Inscricao {
   // Controle
   status: StatusInscricao;
   observacoes: string;
+  origemImportacao?: boolean;
   criadoEm: Timestamp | null;
   atualizadoEm: Timestamp | null;
 }
