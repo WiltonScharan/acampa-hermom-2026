@@ -163,6 +163,7 @@ export default function BaseDadosPage() {
   const [importando, setImportando] = useState(false);
   const [aba, setAba] = useState<"upload" | "colar">("upload");
   const [texto, setTexto] = useState("");
+  const [arrastando, setArrastando] = useState(false);
 
   async function processarLinhas(linhas: LinhaRaw[]) {
     if (!linhas.length) return;
@@ -190,10 +191,7 @@ export default function BaseDadosPage() {
     }
   }
 
-  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    e.target.value = "";
+  async function processarArquivo(file: File) {
     const ext = file.name.split(".").pop()?.toLowerCase();
     if (ext === "xlsx" || ext === "xls") {
       const buf = await file.arrayBuffer();
@@ -202,6 +200,31 @@ export default function BaseDadosPage() {
       const content = await file.text();
       await processarLinhas(parseCSV(content));
     }
+  }
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    await processarArquivo(file);
+  }
+
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    setArrastando(true);
+  }
+
+  function handleDragLeave(e: React.DragEvent) {
+    e.preventDefault();
+    setArrastando(false);
+  }
+
+  async function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setArrastando(false);
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+    await processarArquivo(file);
   }
 
   async function handleColar() {
@@ -287,9 +310,16 @@ export default function BaseDadosPage() {
           </div>
 
           {aba === "upload" ? (
-            <label className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-xl p-12 cursor-pointer hover:border-primary-400 transition-colors">
-              <Upload size={32} className="text-gray-400 mb-2" />
-              <p className="text-sm font-medium text-gray-600">Clique ou arraste o arquivo</p>
+            <label
+              className={`flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-12 cursor-pointer transition-colors ${arrastando ? "border-primary-500 bg-primary-50" : "border-gray-300 hover:border-primary-400"}`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              <Upload size={32} className={`mb-2 ${arrastando ? "text-primary-500" : "text-gray-400"}`} />
+              <p className="text-sm font-medium text-gray-600">
+                {arrastando ? "Solte o arquivo aqui" : "Clique ou arraste o arquivo"}
+              </p>
               <p className="text-xs text-gray-400 mt-1">Aceita <strong>.xlsx</strong>, <strong>.xls</strong> e <strong>.csv</strong></p>
               <input type="file" accept=".csv,.xlsx,.xls,.txt" className="hidden" onChange={handleUpload} />
             </label>
