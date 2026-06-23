@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useInscricoes } from "@/hooks/useInscricoes";
 import { formatarMoeda } from "@/lib/utils";
 import { InscricaoComCalculo } from "@/types";
@@ -91,15 +90,12 @@ export default function DashboardPage() {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Image src="/hermom.png" alt="Hermom" width={56} height={56} className="rounded-xl object-cover" />
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">Acampa Hermom 2026</h1>
-          <p className="text-sm text-gray-500 flex items-center gap-1.5">
-            <Calendar size={14} />
-            19 a 22 de novembro de 2026 · Monte Horebe, Cesário Lange/SP
-          </p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold text-gray-800">Acampa Hermom 2026</h1>
+        <p className="text-sm text-gray-500 flex items-center gap-1.5 mt-1">
+          <Calendar size={14} />
+          19 a 22 de novembro de 2026 · Monte Horebe, Cesário Lange/SP
+        </p>
       </div>
 
       {/* Financeiro */}
