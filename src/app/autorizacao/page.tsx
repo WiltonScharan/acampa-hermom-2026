@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { criarAutorizacao, listarAutorizacoes, Autorizacao } from "@/lib/autorizacoes";
-import { Plus, Copy, CheckCircle, Clock, ExternalLink } from "lucide-react";
+import { criarAutorizacao, listarAutorizacoes, deletarAutorizacao, Autorizacao } from "@/lib/autorizacoes";
+import { Plus, Copy, CheckCircle, Clock, ExternalLink, Trash2 } from "lucide-react";
 
 export default function AutorizacaoAdminPage() {
   const [autorizacoes, setAutorizacoes] = useState<Autorizacao[]>([]);
@@ -10,6 +10,7 @@ export default function AutorizacaoAdminPage() {
   const [nomesMenores, setNomesMenores] = useState("");
   const [criando, setCriando] = useState(false);
   const [copiado, setCopiado] = useState<string | null>(null);
+  const [excluindo, setExcluindo] = useState<string | null>(null);
 
   useEffect(() => {
     listarAutorizacoes().then((data) => {
@@ -37,6 +38,17 @@ export default function AutorizacaoAdminPage() {
 
   function linkAutorizacao(id: string) {
     return `${window.location.origin}/autorizacao/assinar/${id}`;
+  }
+
+  async function handleExcluir(id: string) {
+    if (!confirm("Excluir esta autorização? Esta ação não pode ser desfeita.")) return;
+    setExcluindo(id);
+    try {
+      await deletarAutorizacao(id);
+      setAutorizacoes(autorizacoes.filter((a) => a.id !== id));
+    } finally {
+      setExcluindo(null);
+    }
   }
 
   async function copiarLink(id: string) {
@@ -130,6 +142,14 @@ export default function AutorizacaoAdminPage() {
                   >
                     <ExternalLink size={13} />
                   </a>
+                  <button
+                    onClick={() => handleExcluir(a.id)}
+                    disabled={excluindo === a.id}
+                    className="btn-secondary text-xs flex items-center gap-1.5 py-1.5 text-red-500 hover:text-red-700 hover:border-red-300"
+                    title="Excluir"
+                  >
+                    <Trash2 size={13} />
+                  </button>
                 </div>
               </div>
             </div>

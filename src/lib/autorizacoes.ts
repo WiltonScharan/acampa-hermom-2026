@@ -1,5 +1,5 @@
 import {
-  collection, doc, addDoc, getDoc, updateDoc,
+  collection, doc, addDoc, getDoc, updateDoc, deleteDoc,
   getDocs, orderBy, query, serverTimestamp,
 } from "firebase/firestore";
 import { db } from "./firebase";
@@ -42,6 +42,10 @@ export async function listarAutorizacoes(): Promise<Autorizacao[]> {
   const q = query(collection(db, COL), orderBy("criadoEm", "desc"));
   const snap = await getDocs(q);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Autorizacao));
+}
+
+export async function deletarAutorizacao(id: string): Promise<void> {
+  await deleteDoc(doc(db, COL, id));
 }
 
 export async function assinarAutorizacao(
