@@ -2,24 +2,148 @@
 
 import { useState } from "react";
 import { criarInscricao } from "@/lib/firestore";
-import { calcularValorTotal, calcularIdadeNaData } from "@/lib/utils";
+import { calcularValorTotal } from "@/lib/utils";
 import { InscricaoForm, TipoQuarto, Genero } from "@/types";
-import { Upload, CheckCircle, AlertCircle, Download } from "lucide-react";
+import { Upload, CheckCircle, AlertCircle, Download, Info } from "lucide-react";
 
-interface LinhaPlanilha {
-  nome: string;
-  dataNascimento: string;
-  genero: string;
-  cpf?: string;
-  telefone?: string;
-  email?: string;
-  nomeComprador: string;
-  tipoQuarto: string;
-  onibus: string;
-  valorTotal?: string;
-  valorPago?: string;
-  formaPagamento?: string;
-  observacoes?: string;
+// Normalize: lowercase + remove accents + trim
+function norm(s: string) {
+  return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
+}
+
+// Maps a CSV column header to our internal field name. Returns null to skip the column.
+function mapearColuna(col: string): string | null {
+  const n = norm(col);
+
+  // --- Skip list ---
+  if (n === "usado") return null;
+  if (n === "codigo" || n === "código") return null;
+  if (n.includes(" comprador")) return null;     // "e-mail do comprador", "telefone do comprador", etc.
+  if (n.includes("igreja") || n.includes("regional")) return null;
+  if (n === "status") return null;
+  if (n === "cupom") return null;
+  if (n.includes("transac") || n.includes("transaç") || n.startsWith("id da")) return null;
+  if (n === "parcelas") return null;
+  if (n.includes("data da compra") || n.includes("data do pedido")) return null;
+  if (n.includes("lider") || n.includes("líder")) return null;
+  if (n === "email" || n === "e-mail") return null;  // participant email — skip per user request
+
+  // --- Sistema Acampamentos column names ---
+  if (n === "comprador") return "nomeComprador";
+  if (n === "nome") return "nome";
+  if (n === "cpf") return "cpf";
+  if (n === "celular") return "telefone";
+  if (n === "tipo") return "tipoQuarto";
+  if (n === "genero" || n === "gênero" || n === "sexo") return "genero";
+  if (n.includes("nascimento")) return "dataNascimento";
+  if (n.includes("transporte")) return "onibus";
+  if (n.includes("metodo") || n.includes("método")) return "formaPagamento";
+  if (n.includes("preco") && n.includes("cupom")) return "valorPago";
+
+  // --- Nosso template (camelCase) ---
+  if (n === "nomecomprador") return "nomeComprador";
+  if (n === "datanascimento") return "dataNascimento";
+  if (n === "tipoquarto") return "tipoQuarto";
+  if (n === "telefone") return "telefone";
+  if (n === "onibus") return "onibus";
+  if (n === "valortotal") return "valorTotal";
+  if (n === "valorpago") return "valorPago";
+  if (n === "formapagamento") return "formaPagamento";
+  if (n === "observacoes" || n === "observações") return "observacoes";
+
+  return null; // unknown column → skip
+}
+
+const LABELS: Record<string, string> = {
+  nomeComprador: "Comprador",
+  nome: "Nome",
+  cpf: "CPF",
+  dataNascimento: "Data Nasc.",
+  telefone: "Celular",
+  tipoQuarto: "Tipo Quarto",
+  genero: "Gênero",
+  formaPagamento: "Pagamento",
+  valorPago: "Valor Pago",
+  valorTotal: "Valor Total",
+  onibus: "Ônibus",
+  observacoes: "Obs.",
+};
+
+function converterData(v: string): string {
+  const m = v.trim().match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+  if (!m) return v;
+  const [, d, mo, a] = m;
+  const ano = a.length === 2 ? (parseInt(a) > 30 ? `19${a}` : `20${a}`) : a;
+  return `${ano}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`;
+}
+
+type LinhaRaw = Record<string, string>;
+
+function parseCSV(texto: string): LinhaRaw[] {
+  const linhas = texto.trim().split(/\r?\n/);
+  if (linhas.length < 2) return [];
+  const sep = linhas[0].includes("\t") ? "\t" : linhas[0].includes(";") ? ";" : ",";
+  const cabecalho = linhas[0].split(sep).map((c) => c.trim().replace(/^"|"$/g, ""));
+  return linhas.slice(1).filter((l) => l.trim()).map((linha) => {
+    const cols = linha.split(sep).map((c) => c.trim().replace(/^"|"$/g, ""));
+    const obj: LinhaRaw = {};
+    cabecalho.forEach((col, i) => {
+      const campo = mapearColuna(col);
+      if (campo !== null) obj[campo] = cols[i] || "";
+    });
+    return obj;
+  });
+}
+
+function converterLinha(row: LinhaRaw): InscricaoForm | null {
+  const nome = row.nome?.trim();
+  const dataNascimento = converterData(row.dataNascimento?.trim() || "");
+  if (!nome || !dataNascimento) return null;
+
+  const tipoStr = norm(row.tipoQuarto || "");
+  const tipoQuarto: TipoQuarto = tipoStr.includes("village") ? "village" : "coletivo";
+
+  const onibusStr = norm(row.onibus || "");
+  const onibus =
+    !onibusStr.includes("proprio") &&
+    !onibusStr.includes("próprio") &&
+    !onibusStr.includes("nao") &&
+    !onibusStr.includes("não") &&
+    onibusStr !== "" && onibusStr !== "n" &&
+    (onibusStr.includes("sim") || onibusStr.includes("onibus") || onibusStr.includes("ônibus"));
+
+  const generoStr = norm(row.genero || "");
+  const genero: Genero = generoStr.startsWith("f") ? "feminino" : "masculino";
+
+  const pagStr = norm(row.formaPagamento || "");
+  const formaPagamento = (pagStr.includes("pix") ? "pix" :
+    pagStr.includes("cart") ? "cartao" :
+    pagStr.includes("dinheiro") ? "dinheiro" :
+    pagStr.includes("boleto") ? "boleto" : "pix") as InscricaoForm["formaPagamento"];
+
+  const valorPago = row.valorPago
+    ? parseFloat(row.valorPago.replace(/[^\d,\.]/g, "").replace(",", ".")) : 0;
+  const valorTotal = row.valorTotal
+    ? parseFloat(row.valorTotal.replace(/[^\d,\.]/g, "").replace(",", "."))
+    : calcularValorTotal(dataNascimento, tipoQuarto, onibus);
+
+  return {
+    nome,
+    dataNascimento,
+    genero,
+    cpf: row.cpf || "",
+    telefone: row.telefone || "",
+    email: "",
+    nomeComprador: row.nomeComprador || nome,
+    ehComprador: !row.nomeComprador || row.nomeComprador === nome,
+    tipoQuarto,
+    onibus,
+    valorTotal,
+    valorPago,
+    formaPagamento,
+    status: "pendente",
+    observacoes: row.observacoes || "",
+  };
 }
 
 interface ResultadoImport {
@@ -28,43 +152,21 @@ interface ResultadoImport {
   mensagem?: string;
 }
 
-const COLUNAS_ESPERADAS = [
-  "nome", "dataNascimento", "genero", "cpf", "telefone",
-  "email", "nomeComprador", "tipoQuarto", "onibus",
-  "valorTotal", "valorPago", "formaPagamento", "observacoes"
-];
-
-function parseCSV(texto: string): LinhaPlanilha[] {
-  const linhas = texto.trim().split("\n");
-  const cabecalho = linhas[0].split(/[,;\t]/).map((c) => c.trim().replace(/"/g, ""));
-  return linhas.slice(1).map((linha) => {
-    const cols = linha.split(/[,;\t]/).map((c) => c.trim().replace(/"/g, ""));
-    const obj: Record<string, string> = {};
-    cabecalho.forEach((col, i) => { obj[col] = cols[i] || ""; });
-    return obj as unknown as LinhaPlanilha;
-  });
-}
-
-function normalizar(v: string, opcoes: string[]): string {
-  const lv = v.toLowerCase().trim();
-  return opcoes.find((o) => o.toLowerCase().includes(lv) || lv.includes(o.toLowerCase())) || opcoes[0];
-}
-
 export default function BaseDadosPage() {
   const [texto, setTexto] = useState("");
-  const [preview, setPreview] = useState<LinhaPlanilha[]>([]);
+  const [linhas, setLinhas] = useState<LinhaRaw[]>([]);
   const [resultados, setResultados] = useState<ResultadoImport[]>([]);
   const [importando, setImportando] = useState(false);
   const [aba, setAba] = useState<"colar" | "upload">("colar");
 
   function processarTexto(t: string) {
     setTexto(t);
-    if (!t.trim()) { setPreview([]); return; }
+    setResultados([]);
+    if (!t.trim()) { setLinhas([]); return; }
     try {
-      const linhas = parseCSV(t);
-      setPreview(linhas.slice(0, 10));
+      setLinhas(parseCSV(t).slice(0, 1000));
     } catch {
-      setPreview([]);
+      setLinhas([]);
     }
   }
 
@@ -77,45 +179,21 @@ export default function BaseDadosPage() {
   }
 
   async function handleImportar() {
-    const linhas = parseCSV(texto);
+    const todasLinhas = parseCSV(texto);
     setImportando(true);
     const res: ResultadoImport[] = [];
 
-    for (const linha of linhas) {
+    for (const linha of todasLinhas) {
+      const dados = converterLinha(linha);
+      if (!dados) {
+        res.push({ nome: linha.nome || "(sem nome)", status: "erro", mensagem: "Nome ou data de nascimento ausente" });
+        continue;
+      }
       try {
-        if (!linha.nome || !linha.dataNascimento) {
-          res.push({ nome: linha.nome || "(sem nome)", status: "erro", mensagem: "Nome ou data de nascimento ausente" });
-          continue;
-        }
-
-        const genero = (linha.genero?.toLowerCase().startsWith("f") ? "feminino" : "masculino") as Genero;
-        const tipoQuarto = (linha.tipoQuarto?.toLowerCase().includes("village") ? "village" : "coletivo") as TipoQuarto;
-        const onibus = ["s", "sim", "yes", "1", "true"].includes(linha.onibus?.toLowerCase()?.trim() || "");
-        const valorTotal = linha.valorTotal ? parseFloat(linha.valorTotal.replace(",", ".")) : calcularValorTotal(linha.dataNascimento, tipoQuarto, onibus);
-        const valorPago = linha.valorPago ? parseFloat(linha.valorPago.replace(",", ".")) : 0;
-
-        const data: InscricaoForm = {
-          nome: linha.nome,
-          dataNascimento: linha.dataNascimento,
-          genero,
-          cpf: linha.cpf || "",
-          telefone: linha.telefone || "",
-          email: linha.email || "",
-          nomeComprador: linha.nomeComprador || linha.nome,
-          ehComprador: linha.nomeComprador === linha.nome || !linha.nomeComprador,
-          tipoQuarto,
-          onibus,
-          valorTotal,
-          valorPago,
-          formaPagamento: (linha.formaPagamento as InscricaoForm["formaPagamento"]) || "",
-          status: "pendente",
-          observacoes: linha.observacoes || "",
-        };
-
-        await criarInscricao(data);
-        res.push({ nome: linha.nome, status: "ok" });
+        await criarInscricao(dados);
+        res.push({ nome: dados.nome, status: "ok" });
       } catch (err) {
-        res.push({ nome: linha.nome || "?", status: "erro", mensagem: String(err) });
+        res.push({ nome: dados.nome, status: "erro", mensagem: String(err) });
       }
     }
 
@@ -124,31 +202,20 @@ export default function BaseDadosPage() {
   }
 
   function baixarModelo() {
-    const cabecalho = COLUNAS_ESPERADAS.join(";");
-    const exemplo = [
-      "João Silva",
-      "1990-05-15",
-      "masculino",
-      "000.000.000-00",
-      "(11) 99999-9999",
-      "joao@email.com",
-      "João Silva",
-      "coletivo",
-      "nao",
-      "820",
-      "100",
-      "pix",
-      ""
-    ].join(";");
-    const csv = `${cabecalho}\n${exemplo}`;
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const cab = "nome;dataNascimento;genero;cpf;telefone;nomeComprador;tipoQuarto;onibus;valorTotal;valorPago;formaPagamento;observacoes";
+    const ex = "João Silva;1990-05-15;masculino;000.000.000-00;(11) 99999-9999;João Silva;coletivo;nao;820;100;pix;";
+    const blob = new Blob([`${cab}\n${ex}`], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url;
-    a.download = "modelo-importacao.csv";
-    a.click();
+    a.href = url; a.download = "modelo-importacao.csv"; a.click();
   }
 
+  // Columns present in the parsed rows
+  const colunasMapeadas = linhas.length > 0
+    ? Object.keys(linhas[0]).filter((k) => LABELS[k])
+    : [];
+
+  const preview = linhas.slice(0, 10);
   const sucessos = resultados.filter((r) => r.status === "ok").length;
   const erros = resultados.filter((r) => r.status === "erro").length;
 
@@ -157,25 +224,24 @@ export default function BaseDadosPage() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Base de Dados</h1>
-          <p className="text-sm text-gray-500">Importe inscrições em lote via planilha CSV</p>
+          <p className="text-sm text-gray-500">Importe inscrições em lote — CSV do sistema ou nosso modelo</p>
         </div>
         <button onClick={baixarModelo} className="btn-secondary flex items-center gap-2 text-sm">
           <Download size={15} /> Baixar Modelo CSV
         </button>
       </div>
 
-      {/* Instruções */}
+      {/* Instrução */}
       <div className="card bg-amber-50 border-amber-200">
-        <h3 className="font-semibold text-amber-800 mb-2">Como usar</h3>
-        <ol className="text-sm text-amber-700 space-y-1 list-decimal list-inside">
-          <li>Baixe o modelo CSV e preencha com os dados dos inscritos</li>
-          <li>Cole o conteúdo abaixo ou faça upload do arquivo</li>
-          <li>Revise o preview e clique em Importar</li>
-        </ol>
-        <p className="text-xs text-amber-600 mt-2">
-          Colunas obrigatórias: <strong>nome</strong>, <strong>dataNascimento</strong> (AAAA-MM-DD).
-          Separador: vírgula, ponto-e-vírgula ou tab.
-        </p>
+        <div className="flex items-start gap-2">
+          <Info size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-amber-800 space-y-1">
+            <p className="font-semibold">Formatos aceitos</p>
+            <p><strong>Exportação direta do sistema:</strong> cole o CSV sem precisar editar nada. As colunas desnecessárias são ignoradas automaticamente.</p>
+            <p><strong>Nosso modelo:</strong> baixe o modelo acima, preencha e importe.</p>
+            <p className="text-xs text-amber-600">Separador: vírgula, ponto-e-vírgula ou tabulação. Obrigatório: <strong>Nome</strong> e <strong>Data de Nascimento</strong> (DD/MM/AAAA ou AAAA-MM-DD).</p>
+          </div>
+        </div>
       </div>
 
       {/* Abas */}
@@ -196,7 +262,7 @@ export default function BaseDadosPage() {
       {aba === "colar" ? (
         <textarea
           className="input-field font-mono text-xs h-48 resize-none"
-          placeholder={`nome;dataNascimento;genero;...\nJoão Silva;1990-05-15;masculino;...`}
+          placeholder="Cole aqui o CSV exportado do sistema..."
           value={texto}
           onChange={(e) => processarTexto(e.target.value)}
         />
@@ -209,22 +275,31 @@ export default function BaseDadosPage() {
       )}
 
       {/* Preview */}
-      {preview.length > 0 && (
+      {preview.length > 0 && colunasMapeadas.length > 0 && (
         <div className="card overflow-x-auto">
-          <h3 className="font-semibold text-gray-700 mb-3">Preview (primeiras {preview.length} linhas)</h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-gray-700">
+              Preview — {preview.length} de {linhas.length} linha(s)
+            </h3>
+            <span className="text-xs text-gray-400">{colunasMapeadas.length} colunas importadas</span>
+          </div>
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b">
-                {Object.keys(preview[0]).map((k) => (
-                  <th key={k} className="text-left pb-1.5 pr-3 font-medium text-gray-500">{k}</th>
+                {colunasMapeadas.map((k) => (
+                  <th key={k} className="text-left pb-1.5 pr-3 font-medium text-gray-500 whitespace-nowrap">
+                    {LABELS[k] ?? k}
+                  </th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {preview.map((row, i) => (
                 <tr key={i}>
-                  {Object.values(row).map((v, j) => (
-                    <td key={j} className="py-1.5 pr-3 text-gray-700">{v || "—"}</td>
+                  {colunasMapeadas.map((k) => (
+                    <td key={k} className="py-1.5 pr-3 text-gray-700 max-w-[160px] truncate">
+                      {row[k] || "—"}
+                    </td>
                   ))}
                 </tr>
               ))}
@@ -234,17 +309,15 @@ export default function BaseDadosPage() {
       )}
 
       {/* Botão importar */}
-      {texto && preview.length > 0 && (
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleImportar}
-            disabled={importando}
-            className="btn-primary flex items-center gap-2"
-          >
-            <Upload size={16} />
-            {importando ? "Importando..." : `Importar ${parseCSV(texto).length} registro(s)`}
-          </button>
-        </div>
+      {texto && linhas.length > 0 && resultados.length === 0 && (
+        <button
+          onClick={handleImportar}
+          disabled={importando}
+          className="btn-primary flex items-center gap-2"
+        >
+          <Upload size={16} />
+          {importando ? "Importando..." : `Importar ${linhas.length} registro(s)`}
+        </button>
       )}
 
       {/* Resultados */}
@@ -262,7 +335,12 @@ export default function BaseDadosPage() {
           </div>
           <div className="space-y-1 max-h-60 overflow-y-auto">
             {resultados.map((r, i) => (
-              <div key={i} className={`flex items-center gap-2 text-sm px-3 py-1.5 rounded-lg ${r.status === "ok" ? "bg-green-50 text-green-800" : "bg-red-50 text-red-800"}`}>
+              <div
+                key={i}
+                className={`flex items-center gap-2 text-sm px-3 py-1.5 rounded-lg ${
+                  r.status === "ok" ? "bg-green-50 text-green-800" : "bg-red-50 text-red-800"
+                }`}
+              >
                 {r.status === "ok" ? <CheckCircle size={14} /> : <AlertCircle size={14} />}
                 <span className="font-medium">{r.nome}</span>
                 {r.mensagem && <span className="text-xs opacity-75">— {r.mensagem}</span>}
