@@ -1,24 +1,23 @@
 "use client";
 
 import { useState } from "react";
-import { criarInscricao } from "@/lib/firestore";
+import * as XLSX from "xlsx";
+import { criarInscricao, listarInscricoes } from "@/lib/firestore";
 import { calcularValorTotal } from "@/lib/utils";
 import { InscricaoForm, TipoQuarto, Genero } from "@/types";
-import { Upload, CheckCircle, AlertCircle, Download, Info } from "lucide-react";
+import { Upload, CheckCircle, AlertCircle, Download, Info, Users, UserCheck } from "lucide-react";
 
-// Normalize: lowercase + remove accents + trim
+// ─── Helpers ───────────────────────────────────────────────────────────────
+
 function norm(s: string) {
   return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
 }
 
-// Maps a CSV column header to our internal field name. Returns null to skip the column.
 function mapearColuna(col: string): string | null {
   const n = norm(col);
-
-  // --- Skip list ---
   if (n === "usado") return null;
   if (n === "codigo" || n === "código") return null;
-  if (n.includes(" comprador")) return null;     // "e-mail do comprador", "telefone do comprador", etc.
+  if (n.includes(" comprador")) return null;
   if (n.includes("igreja") || n.includes("regional")) return null;
   if (n === "status") return null;
   if (n === "cupom") return null;
@@ -26,9 +25,8 @@ function mapearColuna(col: string): string | null {
   if (n === "parcelas") return null;
   if (n.includes("data da compra") || n.includes("data do pedido")) return null;
   if (n.includes("lider") || n.includes("líder")) return null;
-  if (n === "email" || n === "e-mail") return null;  // participant email — skip per user request
+  if (n === "email" || n === "e-mail") return null;
 
-  // --- Sistema Acampamentos column names ---
   if (n === "comprador") return "nomeComprador";
   if (n === "nome") return "nome";
   if (n === "cpf") return "cpf";
@@ -39,8 +37,6 @@ function mapearColuna(col: string): string | null {
   if (n.includes("transporte")) return "onibus";
   if (n.includes("metodo") || n.includes("método")) return "formaPagamento";
   if (n.includes("preco") && n.includes("cupom")) return "valorPago";
-
-  // --- Nosso template (camelCase) ---
   if (n === "nomecomprador") return "nomeComprador";
   if (n === "datanascimento") return "dataNascimento";
   if (n === "tipoquarto") return "tipoQuarto";
@@ -50,26 +46,19 @@ function mapearColuna(col: string): string | null {
   if (n === "valorpago") return "valorPago";
   if (n === "formapagamento") return "formaPagamento";
   if (n === "observacoes" || n === "observações") return "observacoes";
-
-  return null; // unknown column → skip
+  return null;
 }
 
 const LABELS: Record<string, string> = {
-  nomeComprador: "Comprador",
-  nome: "Nome",
-  cpf: "CPF",
-  dataNascimento: "Data Nasc.",
-  telefone: "Celular",
-  tipoQuarto: "Tipo Quarto",
-  genero: "Gênero",
-  formaPagamento: "Pagamento",
-  valorPago: "Valor Pago",
-  valorTotal: "Valor Total",
-  onibus: "Ônibus",
-  observacoes: "Obs.",
+  nomeComprador: "Comprador", nome: "Nome", cpf: "CPF",
+  dataNascimento: "Data Nasc.", telefone: "Celular", tipoQuarto: "Tipo Quarto",
+  genero: "Gênero", formaPagamento: "Pagamento", valorPago: "Valor Pago",
+  valorTotal: "Valor Total", onibus: "Ônibus", observacoes: "Obs.",
 };
 
 function converterData(v: string): string {
+  // Already YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(v.trim())) return v.trim();
   const m = v.trim().match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
   if (!m) return v;
   const [, d, mo, a] = m;
@@ -79,20 +68,47 @@ function converterData(v: string): string {
 
 type LinhaRaw = Record<string, string>;
 
+function parseLinhas(cabecalho: string[], valores: string[][]): LinhaRaw[] {
+  return valores.filter((cols) => cols.some((c) => c.trim())).map((cols) => {
+    const obj: LinhaRaw = {};
+    cabecalho.forEach((col, i) => {
+      const campo = mapearColuna(col);
+      if (campo !== null) obj[campo] = (cols[i] ?? "").toString().trim();
+    });
+    return obj;
+  });
+}
+
 function parseCSV(texto: string): LinhaRaw[] {
   const linhas = texto.trim().split(/\r?\n/);
   if (linhas.length < 2) return [];
   const sep = linhas[0].includes("\t") ? "\t" : linhas[0].includes(";") ? ";" : ",";
   const cabecalho = linhas[0].split(sep).map((c) => c.trim().replace(/^"|"$/g, ""));
-  return linhas.slice(1).filter((l) => l.trim()).map((linha) => {
-    const cols = linha.split(sep).map((c) => c.trim().replace(/^"|"$/g, ""));
-    const obj: LinhaRaw = {};
-    cabecalho.forEach((col, i) => {
-      const campo = mapearColuna(col);
-      if (campo !== null) obj[campo] = cols[i] || "";
-    });
-    return obj;
+  const valores = linhas.slice(1).map((l) => l.split(sep).map((c) => c.trim().replace(/^"|"$/g, "")));
+  return parseLinhas(cabecalho, valores);
+}
+
+function parseXLSX(buffer: ArrayBuffer): LinhaRaw[] {
+  const wb = XLSX.read(buffer, { type: "array", cellDates: true });
+  const sheet = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json<(string | number | Date)[]>(sheet, {
+    header: 1,
+    raw: false,
+    dateNF: "DD/MM/YYYY",
   });
+  if (rows.length < 2) return [];
+  const cabecalho = (rows[0] as string[]).map(String);
+  const valores = rows.slice(1).map((r) => (r as (string | number)[]).map(String));
+  return parseLinhas(cabecalho, valores);
+}
+
+// Chave única: CPF (primário) ou nome+dataNasc (fallback)
+function chaveDedup(row: LinhaRaw): string {
+  const cpf = (row.cpf || "").replace(/\D/g, "");
+  if (cpf.length >= 11) return `cpf:${cpf}`;
+  const nome = norm(row.nome || "");
+  const dt = converterData(row.dataNascimento || "");
+  return `nome:${nome}:${dt}`;
 }
 
 function converterLinha(row: LinhaRaw): InscricaoForm | null {
@@ -105,10 +121,8 @@ function converterLinha(row: LinhaRaw): InscricaoForm | null {
 
   const onibusStr = norm(row.onibus || "");
   const onibus =
-    !onibusStr.includes("proprio") &&
-    !onibusStr.includes("próprio") &&
-    !onibusStr.includes("nao") &&
-    !onibusStr.includes("não") &&
+    !onibusStr.includes("proprio") && !onibusStr.includes("próprio") &&
+    !onibusStr.includes("nao") && !onibusStr.includes("não") &&
     onibusStr !== "" && onibusStr !== "n" &&
     (onibusStr.includes("sim") || onibusStr.includes("onibus") || onibusStr.includes("ônibus"));
 
@@ -128,62 +142,77 @@ function converterLinha(row: LinhaRaw): InscricaoForm | null {
     : calcularValorTotal(dataNascimento, tipoQuarto, onibus);
 
   return {
-    nome,
-    dataNascimento,
-    genero,
-    cpf: row.cpf || "",
-    telefone: row.telefone || "",
-    email: "",
+    nome, dataNascimento, genero,
+    cpf: row.cpf || "", telefone: row.telefone || "", email: "",
     nomeComprador: row.nomeComprador || nome,
     ehComprador: !row.nomeComprador || row.nomeComprador === nome,
-    tipoQuarto,
-    onibus,
-    valorTotal,
-    valorPago,
-    formaPagamento,
-    status: "pendente",
-    observacoes: row.observacoes || "",
+    tipoQuarto, onibus, valorTotal, valorPago, formaPagamento,
+    status: "pendente", observacoes: row.observacoes || "",
   };
 }
 
-interface ResultadoImport {
-  nome: string;
-  status: "ok" | "erro";
-  mensagem?: string;
-}
+interface ResultadoImport { nome: string; status: "ok" | "erro"; mensagem?: string; }
+
+// ─── Component ──────────────────────────────────────────────────────────────
 
 export default function BaseDadosPage() {
-  const [texto, setTexto] = useState("");
-  const [linhas, setLinhas] = useState<LinhaRaw[]>([]);
+  const [novas, setNovas] = useState<LinhaRaw[]>([]);
+  const [existentes, setExistentes] = useState<LinhaRaw[]>([]);
+  const [verificando, setVerificando] = useState(false);
   const [resultados, setResultados] = useState<ResultadoImport[]>([]);
   const [importando, setImportando] = useState(false);
-  const [aba, setAba] = useState<"colar" | "upload">("colar");
+  const [aba, setAba] = useState<"upload" | "colar">("upload");
+  const [texto, setTexto] = useState("");
 
-  function processarTexto(t: string) {
-    setTexto(t);
+  async function processarLinhas(linhas: LinhaRaw[]) {
+    if (!linhas.length) return;
+    setVerificando(true);
     setResultados([]);
-    if (!t.trim()) { setLinhas([]); return; }
     try {
-      setLinhas(parseCSV(t).slice(0, 1000));
-    } catch {
-      setLinhas([]);
+      const inscritos = await listarInscricoes();
+      const chavesExistentes = new Set<string>();
+      for (const i of inscritos) {
+        const cpf = (i.cpf || "").replace(/\D/g, "");
+        if (cpf.length >= 11) chavesExistentes.add(`cpf:${cpf}`);
+        chavesExistentes.add(`nome:${norm(i.nome)}:${i.dataNascimento}`);
+      }
+
+      const nov: LinhaRaw[] = [];
+      const ex: LinhaRaw[] = [];
+      for (const linha of linhas) {
+        const chave = chaveDedup(linha);
+        (chave && chavesExistentes.has(chave) ? ex : nov).push(linha);
+      }
+      setNovas(nov);
+      setExistentes(ex);
+    } finally {
+      setVerificando(false);
     }
   }
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const content = await file.text();
-    processarTexto(content);
     e.target.value = "";
+    const ext = file.name.split(".").pop()?.toLowerCase();
+    if (ext === "xlsx" || ext === "xls") {
+      const buf = await file.arrayBuffer();
+      await processarLinhas(parseXLSX(buf));
+    } else {
+      const content = await file.text();
+      await processarLinhas(parseCSV(content));
+    }
+  }
+
+  async function handleColar() {
+    if (!texto.trim()) return;
+    await processarLinhas(parseCSV(texto));
   }
 
   async function handleImportar() {
-    const todasLinhas = parseCSV(texto);
     setImportando(true);
     const res: ResultadoImport[] = [];
-
-    for (const linha of todasLinhas) {
+    for (const linha of novas) {
       const dados = converterLinha(linha);
       if (!dados) {
         res.push({ nome: linha.nome || "(sem nome)", status: "erro", mensagem: "Nome ou data de nascimento ausente" });
@@ -196,7 +225,6 @@ export default function BaseDadosPage() {
         res.push({ nome: dados.nome, status: "erro", mensagem: String(err) });
       }
     }
-
     setResultados(res);
     setImportando(false);
   }
@@ -206,147 +234,208 @@ export default function BaseDadosPage() {
     const ex = "João Silva;1990-05-15;masculino;000.000.000-00;(11) 99999-9999;João Silva;coletivo;nao;820;100;pix;";
     const blob = new Blob([`${cab}\n${ex}`], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = "modelo-importacao.csv"; a.click();
+    const a = document.createElement("a"); a.href = url; a.download = "modelo-importacao.csv"; a.click();
   }
 
-  // Columns present in the parsed rows
-  const colunasMapeadas = linhas.length > 0
-    ? Object.keys(linhas[0]).filter((k) => LABELS[k])
+  function limpar() {
+    setNovas([]); setExistentes([]); setResultados([]); setTexto("");
+  }
+
+  const colunasMapeadas = novas.length > 0
+    ? Object.keys(novas[0]).filter((k) => LABELS[k])
+    : existentes.length > 0
+    ? Object.keys(existentes[0]).filter((k) => LABELS[k])
     : [];
 
-  const preview = linhas.slice(0, 10);
   const sucessos = resultados.filter((r) => r.status === "ok").length;
   const erros = resultados.filter((r) => r.status === "erro").length;
+  const temDados = novas.length > 0 || existentes.length > 0;
 
   return (
     <div className="p-6 space-y-5 max-w-4xl">
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Base de Dados</h1>
-          <p className="text-sm text-gray-500">Importe inscrições em lote — CSV do sistema ou nosso modelo</p>
+          <p className="text-sm text-gray-500">Importe inscrições em lote — detecta automaticamente quem já está cadastrado</p>
         </div>
         <button onClick={baixarModelo} className="btn-secondary flex items-center gap-2 text-sm">
           <Download size={15} /> Baixar Modelo CSV
         </button>
       </div>
 
-      {/* Instrução */}
+      {/* Info */}
       <div className="card bg-amber-50 border-amber-200">
         <div className="flex items-start gap-2">
           <Info size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
           <div className="text-sm text-amber-800 space-y-1">
-            <p className="font-semibold">Formatos aceitos</p>
-            <p><strong>Exportação direta do sistema:</strong> cole o CSV sem precisar editar nada. As colunas desnecessárias são ignoradas automaticamente.</p>
-            <p><strong>Nosso modelo:</strong> baixe o modelo acima, preencha e importe.</p>
-            <p className="text-xs text-amber-600">Separador: vírgula, ponto-e-vírgula ou tabulação. Obrigatório: <strong>Nome</strong> e <strong>Data de Nascimento</strong> (DD/MM/AAAA ou AAAA-MM-DD).</p>
+            <p className="font-semibold">Como funciona</p>
+            <p>Faça upload do seu arquivo <strong>.xlsx</strong> ou <strong>.csv</strong> exportado do sistema. O importador compara com os inscritos já cadastrados (por CPF ou nome+data de nascimento) e mostra <strong>somente os novos</strong> para importar.</p>
           </div>
         </div>
       </div>
 
-      {/* Abas */}
-      <div className="flex gap-2 border-b border-gray-200">
-        {(["colar", "upload"] as const).map((a) => (
-          <button
-            key={a}
-            onClick={() => setAba(a)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-              aba === a ? "border-primary-600 text-primary-600" : "border-transparent text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            {a === "colar" ? "Colar dados" : "Upload CSV"}
-          </button>
-        ))}
-      </div>
-
-      {aba === "colar" ? (
-        <textarea
-          className="input-field font-mono text-xs h-48 resize-none"
-          placeholder="Cole aqui o CSV exportado do sistema..."
-          value={texto}
-          onChange={(e) => processarTexto(e.target.value)}
-        />
-      ) : (
-        <label className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-xl p-12 cursor-pointer hover:border-primary-400 transition-colors">
-          <Upload size={32} className="text-gray-400 mb-2" />
-          <p className="text-sm text-gray-500">Clique para selecionar ou arraste um arquivo .csv</p>
-          <input type="file" accept=".csv,.txt" className="hidden" onChange={handleUpload} />
-        </label>
-      )}
-
-      {/* Preview */}
-      {preview.length > 0 && colunasMapeadas.length > 0 && (
-        <div className="card overflow-x-auto">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-gray-700">
-              Preview — {preview.length} de {linhas.length} linha(s)
-            </h3>
-            <span className="text-xs text-gray-400">{colunasMapeadas.length} colunas importadas</span>
-          </div>
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="border-b">
-                {colunasMapeadas.map((k) => (
-                  <th key={k} className="text-left pb-1.5 pr-3 font-medium text-gray-500 whitespace-nowrap">
-                    {LABELS[k] ?? k}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {preview.map((row, i) => (
-                <tr key={i}>
-                  {colunasMapeadas.map((k) => (
-                    <td key={k} className="py-1.5 pr-3 text-gray-700 max-w-[160px] truncate">
-                      {row[k] || "—"}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Botão importar */}
-      {texto && linhas.length > 0 && resultados.length === 0 && (
-        <button
-          onClick={handleImportar}
-          disabled={importando}
-          className="btn-primary flex items-center gap-2"
-        >
-          <Upload size={16} />
-          {importando ? "Importando..." : `Importar ${linhas.length} registro(s)`}
-        </button>
-      )}
-
-      {/* Resultados */}
-      {resultados.length > 0 && (
-        <div className="card">
-          <div className="flex items-center gap-4 mb-4">
-            <span className="flex items-center gap-1 text-green-700 font-semibold">
-              <CheckCircle size={16} /> {sucessos} importado(s)
-            </span>
-            {erros > 0 && (
-              <span className="flex items-center gap-1 text-red-600 font-semibold">
-                <AlertCircle size={16} /> {erros} erro(s)
-              </span>
-            )}
-          </div>
-          <div className="space-y-1 max-h-60 overflow-y-auto">
-            {resultados.map((r, i) => (
-              <div
-                key={i}
-                className={`flex items-center gap-2 text-sm px-3 py-1.5 rounded-lg ${
-                  r.status === "ok" ? "bg-green-50 text-green-800" : "bg-red-50 text-red-800"
-                }`}
-              >
-                {r.status === "ok" ? <CheckCircle size={14} /> : <AlertCircle size={14} />}
-                <span className="font-medium">{r.nome}</span>
-                {r.mensagem && <span className="text-xs opacity-75">— {r.mensagem}</span>}
-              </div>
+      {/* Input — só mostra se não tem dados carregados */}
+      {!temDados && !verificando && (
+        <>
+          <div className="flex gap-2 border-b border-gray-200">
+            {(["upload", "colar"] as const).map((a) => (
+              <button key={a} onClick={() => setAba(a)}
+                className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${aba === a ? "border-primary-600 text-primary-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}>
+                {a === "upload" ? "Upload de arquivo" : "Colar CSV"}
+              </button>
             ))}
           </div>
+
+          {aba === "upload" ? (
+            <label className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-xl p-12 cursor-pointer hover:border-primary-400 transition-colors">
+              <Upload size={32} className="text-gray-400 mb-2" />
+              <p className="text-sm font-medium text-gray-600">Clique ou arraste o arquivo</p>
+              <p className="text-xs text-gray-400 mt-1">Aceita <strong>.xlsx</strong>, <strong>.xls</strong> e <strong>.csv</strong></p>
+              <input type="file" accept=".csv,.xlsx,.xls,.txt" className="hidden" onChange={handleUpload} />
+            </label>
+          ) : (
+            <div className="space-y-2">
+              <textarea
+                className="input-field font-mono text-xs h-40 resize-none"
+                placeholder="Cole aqui o conteúdo CSV..."
+                value={texto}
+                onChange={(e) => setTexto(e.target.value)}
+              />
+              <button onClick={handleColar} disabled={!texto.trim()} className="btn-primary flex items-center gap-2">
+                <CheckCircle size={15} /> Verificar duplicatas
+              </button>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Verificando... */}
+      {verificando && (
+        <div className="card flex items-center gap-3 text-gray-600">
+          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-600 flex-shrink-0" />
+          Comparando com os inscritos já cadastrados...
+        </div>
+      )}
+
+      {/* Resultado da verificação */}
+      {temDados && !verificando && resultados.length === 0 && (
+        <div className="space-y-4">
+          {/* Resumo */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="card border-l-4 border-l-green-500">
+              <div className="flex items-center gap-2 mb-1">
+                <Users size={16} className="text-green-600" />
+                <span className="font-semibold text-green-700">Novos — prontos para importar</span>
+              </div>
+              <p className="text-3xl font-bold text-gray-800">{novas.length}</p>
+              <p className="text-xs text-gray-500 mt-1">Não encontrados no sistema</p>
+            </div>
+            <div className="card border-l-4 border-l-gray-300">
+              <div className="flex items-center gap-2 mb-1">
+                <UserCheck size={16} className="text-gray-500" />
+                <span className="font-semibold text-gray-500">Já cadastrados — serão ignorados</span>
+              </div>
+              <p className="text-3xl font-bold text-gray-400">{existentes.length}</p>
+              <p className="text-xs text-gray-400 mt-1">Identificados por CPF ou nome + data de nascimento</p>
+            </div>
+          </div>
+
+          {/* Tabela novos */}
+          {novas.length > 0 && colunasMapeadas.length > 0 && (
+            <div className="card overflow-x-auto">
+              <h3 className="font-semibold text-gray-700 mb-3">
+                Registros novos (primeiros {Math.min(novas.length, 10)} de {novas.length})
+              </h3>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b">
+                    {colunasMapeadas.map((k) => (
+                      <th key={k} className="text-left pb-1.5 pr-3 font-medium text-gray-500 whitespace-nowrap">{LABELS[k]}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {novas.slice(0, 10).map((row, i) => (
+                    <tr key={i}>
+                      {colunasMapeadas.map((k) => (
+                        <td key={k} className="py-1.5 pr-3 text-gray-700 max-w-[160px] truncate">{row[k] || "—"}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Tabela existentes (colapsada) */}
+          {existentes.length > 0 && (
+            <details className="card">
+              <summary className="cursor-pointer text-sm font-medium text-gray-500 select-none">
+                Ver {existentes.length} já cadastrado(s) que serão ignorados
+              </summary>
+              <div className="mt-3 overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b">
+                      {colunasMapeadas.map((k) => (
+                        <th key={k} className="text-left pb-1.5 pr-3 font-medium text-gray-400 whitespace-nowrap">{LABELS[k]}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50 opacity-60">
+                    {existentes.map((row, i) => (
+                      <tr key={i}>
+                        {colunasMapeadas.map((k) => (
+                          <td key={k} className="py-1.5 pr-3 text-gray-500 max-w-[160px] truncate">{row[k] || "—"}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </details>
+          )}
+
+          {/* Ações */}
+          <div className="flex gap-3">
+            {novas.length > 0 && (
+              <button onClick={handleImportar} disabled={importando} className="btn-primary flex items-center gap-2">
+                <Upload size={16} />
+                {importando ? "Importando..." : `Importar ${novas.length} novo(s)`}
+              </button>
+            )}
+            <button onClick={limpar} className="btn-secondary">
+              Carregar outro arquivo
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Resultados da importação */}
+      {resultados.length > 0 && (
+        <div className="space-y-4">
+          <div className="card">
+            <div className="flex items-center gap-4 mb-4">
+              <span className="flex items-center gap-1 text-green-700 font-semibold">
+                <CheckCircle size={16} /> {sucessos} importado(s)
+              </span>
+              {erros > 0 && (
+                <span className="flex items-center gap-1 text-red-600 font-semibold">
+                  <AlertCircle size={16} /> {erros} erro(s)
+                </span>
+              )}
+            </div>
+            <div className="space-y-1 max-h-60 overflow-y-auto">
+              {resultados.map((r, i) => (
+                <div key={i} className={`flex items-center gap-2 text-sm px-3 py-1.5 rounded-lg ${r.status === "ok" ? "bg-green-50 text-green-800" : "bg-red-50 text-red-800"}`}>
+                  {r.status === "ok" ? <CheckCircle size={14} /> : <AlertCircle size={14} />}
+                  <span className="font-medium">{r.nome}</span>
+                  {r.mensagem && <span className="text-xs opacity-75">— {r.mensagem}</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+          <button onClick={limpar} className="btn-secondary">Carregar outro arquivo</button>
         </div>
       )}
     </div>
