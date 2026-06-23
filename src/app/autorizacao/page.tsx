@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { criarAutorizacao, listarAutorizacoes, deletarAutorizacao, Autorizacao } from "@/lib/autorizacoes";
-import { Plus, Copy, CheckCircle, Clock, ExternalLink, Trash2 } from "lucide-react";
+import { Plus, Copy, CheckCircle, Clock, ExternalLink, Trash2, Eye, X } from "lucide-react";
+import Image from "next/image";
 
 export default function AutorizacaoAdminPage() {
   const [autorizacoes, setAutorizacoes] = useState<Autorizacao[]>([]);
@@ -11,6 +12,7 @@ export default function AutorizacaoAdminPage() {
   const [criando, setCriando] = useState(false);
   const [copiado, setCopiado] = useState<string | null>(null);
   const [excluindo, setExcluindo] = useState<string | null>(null);
+  const [visualizando, setVisualizando] = useState<Autorizacao | null>(null);
 
   useEffect(() => {
     listarAutorizacoes().then((data) => {
@@ -36,10 +38,6 @@ export default function AutorizacaoAdminPage() {
     }
   }
 
-  function linkAutorizacao(id: string) {
-    return `${window.location.origin}/autorizacao/assinar/${id}`;
-  }
-
   async function handleExcluir(id: string) {
     if (!confirm("Excluir esta autorização? Esta ação não pode ser desfeita.")) return;
     setExcluindo(id);
@@ -51,10 +49,18 @@ export default function AutorizacaoAdminPage() {
     }
   }
 
+  function linkAutorizacao(id: string) {
+    return `${window.location.origin}/autorizacao/assinar/${id}`;
+  }
+
   async function copiarLink(id: string) {
     await navigator.clipboard.writeText(linkAutorizacao(id));
     setCopiado(id);
     setTimeout(() => setCopiado(null), 2000);
+  }
+
+  function isBase64(s: string) {
+    return s.startsWith("data:image");
   }
 
   return (
@@ -120,11 +126,26 @@ export default function AutorizacaoAdminPage() {
                   <p className="font-medium text-gray-800 text-sm">{a.nomesMenores}</p>
                   {a.status === "assinado" && (
                     <p className="text-xs text-gray-500 mt-0.5">
-                      Assinado por: {a.nomeResponsavel} — {a.assinatura}
+                      Assinado por: {a.nomeResponsavel}
+                      {a.assinatura && !isBase64(a.assinatura) && (
+                        <span className="italic ml-1">— "{a.assinatura}"</span>
+                      )}
+                      {a.assinatura && isBase64(a.assinatura) && (
+                        <span className="ml-1 text-gray-400">(assinatura desenhada)</span>
+                      )}
                     </p>
                   )}
                 </div>
                 <div className="flex gap-2 flex-shrink-0">
+                  {a.status === "assinado" && (
+                    <button
+                      onClick={() => setVisualizando(a)}
+                      className="btn-secondary text-xs flex items-center gap-1.5 py-1.5"
+                      title="Ver documento"
+                    >
+                      <Eye size={13} /> Ver
+                    </button>
+                  )}
                   <button
                     onClick={() => copiarLink(a.id)}
                     className="btn-secondary text-xs flex items-center gap-1.5 py-1.5"
@@ -154,6 +175,74 @@ export default function AutorizacaoAdminPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Modal Ver Documento */}
+      {visualizando && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setVisualizando(null)}>
+          <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 border-b">
+              <h2 className="font-bold text-gray-800">Documento Assinado</h2>
+              <button onClick={() => setVisualizando(null)} className="text-gray-400 hover:text-gray-600">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4 text-sm">
+              {/* Cabeçalho */}
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 relative flex-shrink-0">
+                  <Image src="/hermom.png" alt="Hermom" fill className="rounded-lg object-cover" />
+                </div>
+                <div>
+                  <p className="font-bold text-gray-800">Autorização de Participação</p>
+                  <p className="text-xs text-gray-500">Acampamento Hermom 2026 · 19 a 22 de novembro</p>
+                </div>
+              </div>
+
+              <div className="border border-gray-100 rounded-xl p-4 bg-gray-50 space-y-2 text-gray-700">
+                <p className="text-center font-semibold border-b pb-2">AUTORIZAÇÃO DE PARTICIPAÇÃO PARA MENOR</p>
+                <p>Eu, abaixo identificado(a), autorizo o(a)(s) menor(es):</p>
+                <p className="font-semibold text-primary-800 bg-primary-50 rounded-lg p-2">{visualizando.nomesMenores}</p>
+                <p>a participar do <strong>Acampamento Hermom 2026</strong>, realizado de 19 a 22 de novembro de 2026 no Acampamento Monte Horebe, Cesário Lange/SP.</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">Responsável</p>
+                  <p className="font-medium text-gray-800">{visualizando.nomeResponsavel}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">CPF</p>
+                  <p className="font-medium text-gray-800">{visualizando.cpfResponsavel || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">Telefone</p>
+                  <p className="font-medium text-gray-800">{visualizando.telefoneResponsavel || "—"}</p>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Assinatura</p>
+                {isBase64(visualizando.assinatura) ? (
+                  <div className="border border-gray-200 rounded-lg p-2 bg-white">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={visualizando.assinatura} alt="Assinatura" className="max-h-24 w-auto" />
+                  </div>
+                ) : (
+                  <p className="font-serif text-xl italic text-gray-800 border-b border-gray-300 pb-1 w-fit">
+                    {visualizando.assinatura}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex items-center gap-1.5 text-green-700 bg-green-50 rounded-lg p-3">
+                <CheckCircle size={16} />
+                <span className="text-xs font-medium">Documento assinado e registrado digitalmente.</span>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

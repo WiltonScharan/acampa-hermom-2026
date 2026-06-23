@@ -80,6 +80,8 @@ export default function AssinarAutorizacaoPage() {
 
   async function handleAssinar() {
     if (!nome.trim()) return alert("Preencha seu nome completo.");
+    if (!cpf.trim()) return alert("Preencha seu CPF.");
+    if (!telefone.trim()) return alert("Preencha seu telefone.");
 
     let assinaturaFinal = "";
     if (tipoAssinatura === "digitar") {
@@ -175,11 +177,11 @@ export default function AssinarAutorizacaoPage() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="label-field">CPF</label>
+              <label className="label-field">CPF *</label>
               <input className="input-field" placeholder="000.000.000-00" value={cpf} onChange={(e) => setCpf(e.target.value)} />
             </div>
             <div>
-              <label className="label-field">Telefone</label>
+              <label className="label-field">Telefone *</label>
               <input className="input-field" placeholder="(11) 99999-9999" value={telefone} onChange={(e) => setTelefone(e.target.value)} />
             </div>
           </div>
