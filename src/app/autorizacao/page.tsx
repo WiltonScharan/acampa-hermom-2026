@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { criarAutorizacao, listarAutorizacoes, deletarAutorizacao, Autorizacao } from "@/lib/autorizacoes";
-import { Plus, Copy, CheckCircle, Clock, ExternalLink, Trash2, Eye, X } from "lucide-react";
+import { Plus, Copy, CheckCircle, Clock, ExternalLink, Trash2, Eye, X, Printer } from "lucide-react";
 import Image from "next/image";
 
 export default function AutorizacaoAdminPage() {
@@ -61,6 +61,52 @@ export default function AutorizacaoAdminPage() {
 
   function isBase64(s: string) {
     return s.startsWith("data:image");
+  }
+
+  function imprimirDocumento(a: Autorizacao) {
+    const assinaturaHtml = isBase64(a.assinatura)
+      ? `<img src="${a.assinatura}" alt="Assinatura" style="max-height:80px;border:1px solid #e5e7eb;padding:8px;border-radius:8px;" />`
+      : `<span style="font-family:Georgia,serif;font-size:22px;font-style:italic;border-bottom:1px solid #9ca3af;padding-bottom:4px;">${a.assinatura}</span>`;
+
+    const win = window.open("", "_blank");
+    if (!win) return;
+    win.document.write(`<!DOCTYPE html><html lang="pt-BR"><head>
+      <meta charset="UTF-8" />
+      <title>Autorização — ${a.nomesMenores}</title>
+      <style>
+        body{font-family:Arial,sans-serif;max-width:600px;margin:40px auto;color:#1f2937;font-size:14px;}
+        h1{font-size:13px;text-align:center;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #e5e7eb;padding-bottom:12px;margin-bottom:16px;}
+        .header{display:flex;align-items:center;gap:12px;margin-bottom:20px;}
+        .header img{width:48px;height:48px;border-radius:8px;}
+        .title{font-size:16px;font-weight:700;}
+        .subtitle{font-size:12px;color:#6b7280;}
+        .menor{background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:10px 14px;font-weight:600;color:#c2410c;margin:10px 0;}
+        .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0;}
+        .label{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#9ca3af;margin-bottom:3px;}
+        .value{font-weight:600;}
+        .assinatura{margin-top:16px;}
+        .ok{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 14px;color:#166534;font-size:13px;margin-top:16px;}
+        @media print{body{margin:20px;}}
+      </style>
+    </head><body>
+      <div class="header">
+        <div><div class="title">Autorização de Participação</div><div class="subtitle">Acampamento Hermom 2026 · 19 a 22 de novembro</div></div>
+      </div>
+      <h1>Autorização de Participação para Menor</h1>
+      <p>Eu, abaixo identificado(a), na qualidade de pai/mãe ou responsável legal, autorizo o(a)(s) menor(es):</p>
+      <div class="menor">${a.nomesMenores}</div>
+      <p>a participar do <strong>Acampamento Hermom 2026</strong>, realizado de 19 a 22 de novembro de 2026 no Acampamento Monte Horebe, Cesário Lange/SP. Declaro estar ciente de todas as regras do evento.</p>
+      <div class="grid">
+        <div><div class="label">Responsável</div><div class="value">${a.nomeResponsavel}</div></div>
+        <div><div class="label">CPF</div><div class="value">${a.cpfResponsavel || "—"}</div></div>
+        <div><div class="label">Telefone</div><div class="value">${a.telefoneResponsavel || "—"}</div></div>
+      </div>
+      <div class="assinatura"><div class="label">Assinatura</div><br/>${assinaturaHtml}</div>
+      <div class="ok">✓ Documento assinado e registrado digitalmente.</div>
+    </body></html>`);
+    win.document.close();
+    win.focus();
+    setTimeout(() => win.print(), 500);
   }
 
   return (
@@ -184,9 +230,17 @@ export default function AutorizacaoAdminPage() {
           <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-5 border-b">
               <h2 className="font-bold text-gray-800">Documento Assinado</h2>
-              <button onClick={() => setVisualizando(null)} className="text-gray-400 hover:text-gray-600">
-                <X size={20} />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => imprimirDocumento(visualizando)}
+                  className="btn-secondary text-xs flex items-center gap-1.5 py-1.5"
+                >
+                  <Printer size={14} /> Imprimir / Salvar PDF
+                </button>
+                <button onClick={() => setVisualizando(null)} className="text-gray-400 hover:text-gray-600 ml-1">
+                  <X size={20} />
+                </button>
+              </div>
             </div>
 
             <div className="p-5 space-y-4 text-sm">

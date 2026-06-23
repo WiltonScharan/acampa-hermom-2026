@@ -20,6 +20,19 @@ export default function AssinarAutorizacaoPage() {
   const [telefone, setTelefone] = useState("");
   const [assinatura, setAssinatura] = useState("");
 
+  function maskCPF(v: string) {
+    return v.replace(/\D/g, "").slice(0, 11)
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+  }
+
+  function maskPhone(v: string) {
+    const d = v.replace(/\D/g, "").slice(0, 11);
+    if (d.length <= 10) return d.replace(/(\d{2})(\d)/, "($1) $2").replace(/(\d{4})(\d)/, "$1-$2");
+    return d.replace(/(\d{2})(\d)/, "($1) $2").replace(/(\d{5})(\d)/, "$1-$2");
+  }
+
   // Canvas para assinatura desenhada
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [desenhando, setDesenhando] = useState(false);
@@ -178,11 +191,11 @@ export default function AssinarAutorizacaoPage() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="label-field">CPF *</label>
-              <input className="input-field" placeholder="000.000.000-00" value={cpf} onChange={(e) => setCpf(e.target.value)} />
+              <input className="input-field" placeholder="000.000.000-00" value={cpf} onChange={(e) => setCpf(maskCPF(e.target.value))} />
             </div>
             <div>
               <label className="label-field">Telefone *</label>
-              <input className="input-field" placeholder="(11) 99999-9999" value={telefone} onChange={(e) => setTelefone(e.target.value)} />
+              <input className="input-field" placeholder="(11) 99999-9999" value={telefone} onChange={(e) => setTelefone(maskPhone(e.target.value))} />
             </div>
           </div>
         </div>
