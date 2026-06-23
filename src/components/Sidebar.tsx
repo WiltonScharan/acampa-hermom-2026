@@ -52,15 +52,16 @@ export default function Sidebar() {
       {/* Logo */}
       <div className={clsx(
         "flex items-center gap-3 border-b border-gray-100",
-        collapsed ? "px-3 py-3 justify-center" : "px-4 py-3"
+        collapsed ? "px-3 py-3 justify-center" : "px-4 py-4"
       )}>
-        <Image
-          src="/hermom.png"
-          alt="Igreja Hermom"
-          width={collapsed ? 36 : 52}
-          height={collapsed ? 36 : 52}
-          className="rounded-xl flex-shrink-0 object-cover"
-        />
+        <div className={clsx("flex-shrink-0 relative", collapsed ? "w-9 h-9" : "w-14 h-14")}>
+          <Image
+            src="/hermom.png"
+            alt="Igreja Hermom"
+            fill
+            className="rounded-xl object-cover"
+          />
+        </div>
         {!collapsed && (
           <div className="overflow-hidden">
             <p className="font-bold text-primary-700 text-base leading-tight">Acampa</p>

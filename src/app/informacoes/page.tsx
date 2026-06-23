@@ -98,51 +98,25 @@ export default function InformacoesPage() {
         <h2 className="font-semibold text-gray-700 mb-4 flex items-center gap-2">
           <AlertTriangle size={18} className="text-primary-600" /> Regras e Informações Importantes
         </h2>
-        <ul className="space-y-2.5 text-sm text-gray-700">
-          <li className="flex items-start gap-2">
-            <span className="text-primary-500 font-bold mt-0.5">•</span>
-            Todas as opções de reserva exigem pagamento de um sinal de <strong>R$ 100,00 por pessoa</strong> pelo App Hermom. O restante é formalizado com o Wilton.
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-primary-500 font-bold mt-0.5">•</span>
-            Quem não tiver transporte próprio pode optar pelo transporte coletivo com custo extra de R$ 150,00/pessoa.
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-primary-500 font-bold mt-0.5">•</span>
-            Opção de quarto Village é <strong>exclusiva para casais</strong> (vagas limitadas). Selecionar o Ticket Village no momento da inscrição.
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-primary-500 font-bold mt-0.5">•</span>
-            <strong>Menores de 14 anos</strong> só podem participar acompanhados dos pais ou responsáveis.
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-primary-500 font-bold mt-0.5">•</span>
-            <strong>De 15 a 18 anos</strong> somente com autorização preenchida e entregue em mãos antes do evento. Use a aba <strong>"Autorização Menores"</strong>.
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-primary-500 font-bold mt-0.5">•</span>
-            Fazer a inscrição para todos que participarão, <strong>inclusive crianças isentas</strong>.
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-primary-500 font-bold mt-0.5">•</span>
-            A idade para fins de pagamento é calculada pela <strong>idade no dia do evento (19/11/2026)</strong>.
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-primary-500 font-bold mt-0.5">•</span>
-            Em caso de desistência, o sinal de R$ 100,00 <strong>não é reembolsável</strong>.
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-primary-500 font-bold mt-0.5">•</span>
-            A Igreja Hermom não se responsabiliza por objetos esquecidos, perdidos ou danificados.
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-primary-500 font-bold mt-0.5">•</span>
-            Objetos quebrados ou danificados serão cobrados do responsável.
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-primary-500 font-bold mt-0.5">•</span>
-            Vagas sujeitas à disponibilidade.
-          </li>
+        <ul className="space-y-2 text-sm text-gray-700">
+          {[
+            "Todas as opções de reserva exigem pagamento de um sinal de R$ 100,00 por pessoa pelo App Hermom. O restante é formalizado com o Wilton.",
+            "Quem não tiver transporte próprio pode optar pelo transporte coletivo com custo extra de R$ 150,00 por pessoa.",
+            "Opção de quarto Village é exclusiva para casais (vagas limitadas). Selecionar o Ticket Village no momento da inscrição.",
+            "Menores de 14 anos só podem participar acompanhados dos pais ou responsáveis.",
+            "De 15 a 18 anos somente com autorização preenchida e entregue em mãos antes do evento. Use a aba Autorização Menores.",
+            "Fazer a inscrição para todos que participarão, inclusive crianças isentas de pagamento.",
+            "A idade para fins de pagamento é calculada pela idade no dia do evento (19/11/2026).",
+            "Em caso de desistência, o sinal de R$ 100,00 não é reembolsável.",
+            "A Igreja Hermom não se responsabiliza por objetos esquecidos, perdidos ou danificados.",
+            "Objetos quebrados ou danificados serão cobrados do responsável.",
+            "Vagas sujeitas à disponibilidade.",
+          ].map((regra, i) => (
+            <li key={i} className="flex items-start gap-2">
+              <span className="text-primary-500 font-bold mt-0.5 flex-shrink-0">•</span>
+              <span>{regra}</span>
+            </li>
+          ))}
         </ul>
       </div>
     </div>

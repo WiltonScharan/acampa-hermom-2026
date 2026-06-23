@@ -1,181 +1,141 @@
 "use client";
 
-import { useState } from "react";
-import { FileText, Printer, ExternalLink, Info } from "lucide-react";
+import { useEffect, useState } from "react";
+import { criarAutorizacao, listarAutorizacoes, Autorizacao } from "@/lib/autorizacoes";
+import { Plus, Copy, CheckCircle, Clock, ExternalLink } from "lucide-react";
 
-export default function AutorizacaoPage() {
-  const [nomeResponsavel, setNomeResponsavel] = useState("");
+export default function AutorizacaoAdminPage() {
+  const [autorizacoes, setAutorizacoes] = useState<Autorizacao[]>([]);
+  const [loading, setLoading] = useState(true);
   const [nomesMenores, setNomesMenores] = useState("");
-  const [cpfResponsavel, setCpfResponsavel] = useState("");
-  const [telefoneResponsavel, setTelefoneResponsavel] = useState("");
+  const [criando, setCriando] = useState(false);
+  const [copiado, setCopiado] = useState<string | null>(null);
 
-  function handlePrint() {
-    window.print();
+  useEffect(() => {
+    listarAutorizacoes().then((data) => {
+      setAutorizacoes(data);
+      setLoading(false);
+    });
+  }, []);
+
+  async function handleCriar() {
+    if (!nomesMenores.trim()) return;
+    setCriando(true);
+    try {
+      const id = await criarAutorizacao(nomesMenores.trim());
+      const nova: Autorizacao = {
+        id, nomesMenores: nomesMenores.trim(),
+        nomeResponsavel: "", cpfResponsavel: "", telefoneResponsavel: "",
+        assinatura: "", status: "pendente", criadoEm: null, assinadoEm: null,
+      };
+      setAutorizacoes([nova, ...autorizacoes]);
+      setNomesMenores("");
+    } finally {
+      setCriando(false);
+    }
+  }
+
+  function linkAutorizacao(id: string) {
+    return `${window.location.origin}/autorizacao/assinar/${id}`;
+  }
+
+  async function copiarLink(id: string) {
+    await navigator.clipboard.writeText(linkAutorizacao(id));
+    setCopiado(id);
+    setTimeout(() => setCopiado(null), 2000);
   }
 
   return (
     <div className="p-6 space-y-5 max-w-3xl">
-      {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-800">Autorização para Menores</h1>
         <p className="text-sm text-gray-500 mt-1">
-          Obrigatório para menores de 14 anos. De 15 a 18 anos com autorização assinada entregue antes do evento.
+          Gere um link para o responsável preencher e assinar digitalmente.
         </p>
       </div>
 
-      {/* Aviso */}
-      <div className="card bg-amber-50 border-amber-200 flex gap-3">
-        <Info size={18} className="text-amber-600 flex-shrink-0 mt-0.5" />
-        <div className="text-sm text-amber-800">
-          <p className="font-semibold mb-1">Como usar este documento</p>
-          <ol className="list-decimal list-inside space-y-1">
-            <li>Preencha os campos abaixo com os dados do responsável e do(s) menor(es)</li>
-            <li>Clique em <strong>"Imprimir / Salvar PDF"</strong> para gerar o documento</li>
-            <li>O responsável assina e entrega ao Wilton antes do evento</li>
-          </ol>
-          <p className="mt-2">
-            Para assinatura 100% digital (sem imprimir), use o{" "}
-            <a
-              href="https://docs.google.com/forms"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline font-semibold"
-            >
-              Google Forms
-            </a>{" "}
-            ou o{" "}
-            <a
-              href="https://www.docusign.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline font-semibold"
-            >
-              DocuSign
-            </a>.
-          </p>
-        </div>
-      </div>
-
-      {/* Formulário de preenchimento */}
-      <div className="card print:hidden">
-        <h3 className="font-semibold text-gray-700 mb-4">Preencha para gerar o documento</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="md:col-span-2">
-            <label className="label-field">Nome completo do responsável</label>
-            <input
-              className="input-field"
-              placeholder="Ex: João da Silva"
-              value={nomeResponsavel}
-              onChange={(e) => setNomeResponsavel(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="label-field">CPF do responsável</label>
-            <input
-              className="input-field"
-              placeholder="000.000.000-00"
-              value={cpfResponsavel}
-              onChange={(e) => setCpfResponsavel(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="label-field">Telefone do responsável</label>
-            <input
-              className="input-field"
-              placeholder="(11) 99999-9999"
-              value={telefoneResponsavel}
-              onChange={(e) => setTelefoneResponsavel(e.target.value)}
-            />
-          </div>
-          <div className="md:col-span-2">
-            <label className="label-field">Nome(s) do(s) menor(es) autorizado(s)</label>
-            <textarea
-              className="input-field resize-none"
-              rows={3}
-              placeholder="Ex: Maria da Silva, Pedro da Silva"
-              value={nomesMenores}
-              onChange={(e) => setNomesMenores(e.target.value)}
-            />
-          </div>
-        </div>
-        <div className="mt-4 flex gap-3">
-          <button onClick={handlePrint} className="btn-primary flex items-center gap-2">
-            <Printer size={16} />
-            Imprimir / Salvar PDF
+      {/* Criar nova */}
+      <div className="card">
+        <h3 className="font-semibold text-gray-700 mb-3">Gerar nova autorização</h3>
+        <div className="flex gap-2">
+          <input
+            className="input-field flex-1"
+            placeholder="Nome(s) do(s) menor(es) — ex: Maria Silva, Pedro Silva"
+            value={nomesMenores}
+            onChange={(e) => setNomesMenores(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleCriar()}
+          />
+          <button
+            onClick={handleCriar}
+            disabled={!nomesMenores.trim() || criando}
+            className="btn-primary flex items-center gap-2"
+          >
+            <Plus size={16} />
+            {criando ? "Criando..." : "Gerar Link"}
           </button>
         </div>
+        <p className="text-xs text-gray-400 mt-2">
+          Após gerar, copie o link e envie pelo WhatsApp para o responsável assinar.
+        </p>
       </div>
 
-      {/* Documento imprimível */}
-      <div className="card border-2 border-gray-300 print:border-0 print:shadow-none" id="documento-autorizacao">
-        {/* Cabeçalho do documento */}
-        <div className="text-center border-b border-gray-300 pb-4 mb-6">
-          <p className="text-lg font-bold uppercase tracking-wide">Igreja Hermom</p>
-          <p className="text-base font-semibold mt-1">AUTORIZAÇÃO DE PARTICIPAÇÃO PARA MENOR</p>
-          <p className="text-sm text-gray-600 mt-1">Acampamento Hermom 2026 — 19 a 22 de novembro de 2026</p>
-          <p className="text-xs text-gray-500">Acampamento Monte Horebe · Cesário Lange/SP</p>
+      {/* Lista */}
+      {loading ? (
+        <div className="flex justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
         </div>
-
-        <div className="text-sm text-gray-800 space-y-4 leading-relaxed">
-          <p>
-            Eu, <strong>{nomeResponsavel || "_________________________________"}</strong>,
-            portador(a) do CPF <strong>{cpfResponsavel || "___________________"}</strong>,
-            telefone <strong>{telefoneResponsavel || "___________________"}</strong>,
-            na qualidade de pai/mãe ou responsável legal, autorizo o(a)(s) menor(es):
-          </p>
-
-          <div className="border border-gray-300 rounded-lg p-3 min-h-[60px] bg-gray-50">
-            <p className="font-medium">
-              {nomesMenores || "________________________________________________________________________"}
-            </p>
-          </div>
-
-          <p>
-            a participar do <strong>Acampamento Hermom 2026</strong>, evento realizado pela Igreja Hermom
-            no período de <strong>19 a 22 de novembro de 2026</strong>, no Acampamento Monte Horebe,
-            localizado em Cesário Lange/SP.
-          </p>
-
-          <p>
-            Estou ciente de todas as regras do evento, incluindo:
-          </p>
-
-          <ul className="list-disc list-inside space-y-1 ml-2 text-gray-700">
-            <li>Check-in: 19/11 das 20h às 23h. Check-out: 22/11 até 18h.</li>
-            <li>Menores de 14 anos somente acompanhados dos pais ou responsáveis.</li>
-            <li>De 15 a 18 anos, esta autorização deve ser entregue em mãos antes do evento.</li>
-            <li>A Igreja Hermom não se responsabiliza por objetos esquecidos, perdidos ou danificados.</li>
-            <li>Objetos quebrados ou danificados serão cobrados do responsável.</li>
-          </ul>
-
-          <p>
-            Declaro que as informações acima são verdadeiras e assumo total responsabilidade pela
-            participação do(a)(s) menor(es) no referido evento.
-          </p>
-
-          <div className="mt-8 pt-6 border-t border-gray-300 grid grid-cols-2 gap-8 text-center text-xs">
-            <div>
-              <div className="border-b border-gray-400 mb-2 pb-8"></div>
-              <p>Assinatura do Responsável</p>
-              <p className="mt-1 text-gray-500">{nomeResponsavel || "Nome do Responsável"}</p>
-            </div>
-            <div>
-              <div className="border-b border-gray-400 mb-2 pb-8"></div>
-              <p>Data e Local</p>
-              <p className="mt-1 text-gray-500">_________ / _________ / 2026</p>
-            </div>
-          </div>
+      ) : autorizacoes.length === 0 ? (
+        <div className="card text-center py-12 text-gray-400">
+          Nenhuma autorização criada ainda.
         </div>
-      </div>
-
-      <style>{`
-        @media print {
-          .print\\:hidden { display: none !important; }
-          body > * { visibility: hidden; }
-          #documento-autorizacao, #documento-autorizacao * { visibility: visible; }
-          #documento-autorizacao { position: absolute; left: 0; top: 0; width: 100%; }
-        }
-      `}</style>
+      ) : (
+        <div className="space-y-3">
+          {autorizacoes.map((a) => (
+            <div key={a.id} className={`card border-l-4 ${a.status === "assinado" ? "border-l-green-500" : "border-l-yellow-400"}`}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    {a.status === "assinado" ? (
+                      <span className="flex items-center gap-1 text-xs font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">
+                        <CheckCircle size={11} /> Assinado
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-xs font-semibold text-yellow-700 bg-yellow-100 px-2 py-0.5 rounded-full">
+                        <Clock size={11} /> Pendente
+                      </span>
+                    )}
+                  </div>
+                  <p className="font-medium text-gray-800 text-sm">{a.nomesMenores}</p>
+                  {a.status === "assinado" && (
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Assinado por: {a.nomeResponsavel} — {a.assinatura}
+                    </p>
+                  )}
+                </div>
+                <div className="flex gap-2 flex-shrink-0">
+                  <button
+                    onClick={() => copiarLink(a.id)}
+                    className="btn-secondary text-xs flex items-center gap-1.5 py-1.5"
+                    title="Copiar link"
+                  >
+                    {copiado === a.id ? <CheckCircle size={13} className="text-green-600" /> : <Copy size={13} />}
+                    {copiado === a.id ? "Copiado!" : "Copiar link"}
+                  </button>
+                  <a
+                    href={`/autorizacao/assinar/${a.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-secondary text-xs flex items-center gap-1.5 py-1.5"
+                    title="Abrir"
+                  >
+                    <ExternalLink size={13} />
+                  </a>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
