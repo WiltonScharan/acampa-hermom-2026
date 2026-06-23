@@ -16,6 +16,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Tent,
+  Info,
+  FileText,
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -31,6 +33,8 @@ const navItems = [
   { href: "/homens", label: "Homens 30-59", icon: User },
   { href: "/mulheres", label: "Mulheres 30-59", icon: User },
   { href: "/onibus", label: "Ônibus", icon: Bus },
+  { href: "/autorizacao", label: "Autorização Menores", icon: FileText },
+  { href: "/informacoes", label: "Informações", icon: Info },
   { href: "/base-de-dados", label: "Base de Dados", icon: Tent },
 ];
 
@@ -46,17 +50,20 @@ export default function Sidebar() {
       )}
     >
       {/* Logo */}
-      <div className="flex items-center gap-3 px-4 py-4 border-b border-gray-100">
+      <div className={clsx(
+        "flex items-center gap-3 border-b border-gray-100",
+        collapsed ? "px-3 py-3 justify-center" : "px-4 py-3"
+      )}>
         <Image
           src="/hermom.png"
           alt="Igreja Hermom"
-          width={36}
-          height={36}
-          className="rounded-full flex-shrink-0 object-cover"
+          width={collapsed ? 36 : 52}
+          height={collapsed ? 36 : 52}
+          className="rounded-xl flex-shrink-0 object-cover"
         />
         {!collapsed && (
           <div className="overflow-hidden">
-            <p className="font-bold text-primary-700 text-sm leading-tight">Acampa</p>
+            <p className="font-bold text-primary-700 text-base leading-tight">Acampa</p>
             <p className="text-xs text-gray-500 leading-tight">Hermom 2026</p>
           </div>
         )}
