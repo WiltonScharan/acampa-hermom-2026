@@ -22,7 +22,7 @@ import {
   MessageCircle,
 } from "lucide-react";
 import clsx from "clsx";
-import { InscricaoComCalculo } from "@/types";
+import { InscricaoComCalculo, StatusInscricao } from "@/types";
 
 export default function InscritosPage() {
   const { inscricoes, loading } = useInscricoes();
@@ -52,6 +52,8 @@ export default function InscritosPage() {
     });
 
   const [togglingOnibus, setTogglingOnibus] = useState<string | null>(null);
+  const [editingCell, setEditingCell] = useState<{ id: string; field: "valorTotal" | "valorPago" | "valorAPagar" | "status" } | null>(null);
+  const [editValue, setEditValue] = useState("");
 
   async function handleExcluir(id: string, nome: string) {
     if (!confirm(`Excluir inscrição de "${nome}"?`)) return;
@@ -66,6 +68,31 @@ export default function InscritosPage() {
       await atualizarInscricao(ins.id, { onibus: novoOnibus, valorTotal: novoTotal });
     } finally {
       setTogglingOnibus(null);
+    }
+  }
+
+  function startEdit(ins: InscricaoComCalculo, field: "valorTotal" | "valorPago" | "valorAPagar" | "status") {
+    const val = field === "valorTotal" ? String(ins.valorTotal)
+      : field === "valorPago" ? String(ins.valorPago)
+      : field === "valorAPagar" ? String(ins.valorAPagar)
+      : ins.status;
+    setEditingCell({ id: ins.id, field });
+    setEditValue(val);
+  }
+
+  async function saveEdit(ins: InscricaoComCalculo) {
+    if (!editingCell || editingCell.id !== ins.id) return;
+    setEditingCell(null);
+    const { field } = editingCell;
+    const num = parseFloat(editValue.replace(",", "."));
+    if (isNaN(num) || num < 0) return;
+    if (field === "valorTotal" && num !== ins.valorTotal) {
+      await atualizarInscricao(ins.id, { valorTotal: num });
+    } else if (field === "valorPago" && num !== ins.valorPago) {
+      await atualizarInscricao(ins.id, { valorPago: num });
+    } else if (field === "valorAPagar") {
+      const newPago = Math.max(0, ins.valorTotal - num);
+      if (newPago !== ins.valorPago) await atualizarInscricao(ins.id, { valorPago: newPago });
     }
   }
 
@@ -201,13 +228,66 @@ export default function InscritosPage() {
                         {ins.onibus ? "Sim" : "Não"}
                       </button>
                     </td>
-                    <td className="px-4 py-3 text-right font-medium">{formatarMoeda(ins.valorTotal)}</td>
-                    <td className="px-4 py-3 text-right text-green-700">{formatarMoeda(ins.valorPago)}</td>
-                    <td className={clsx("px-4 py-3 text-right font-semibold", ins.valorAPagar > 0 ? "text-red-600" : "text-green-600")}>
-                      {formatarMoeda(ins.valorAPagar)}
+                    <td className="px-4 py-3 text-right font-medium" onClick={(e) => { e.stopPropagation(); startEdit(ins, "valorTotal"); }}>
+                      {editingCell?.id === ins.id && editingCell.field === "valorTotal" ? (
+                        <input autoFocus type="number" min="0" step="0.01"
+                          className="w-24 text-right border border-primary-400 rounded px-1.5 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onBlur={() => saveEdit(ins)}
+                          onKeyDown={(e) => { if (e.key === "Enter") saveEdit(ins); if (e.key === "Escape") setEditingCell(null); }}
+                        />
+                      ) : (
+                        <span className="cursor-pointer hover:text-primary-700 hover:underline decoration-dashed" title="Clique para editar">{formatarMoeda(ins.valorTotal)}</span>
+                      )}
                     </td>
-                    <td className="px-4 py-3 text-center">
-                      <span className={`badge-${ins.status}`}>{LABEL_STATUS[ins.status]}</span>
+                    <td className="px-4 py-3 text-right text-green-700" onClick={(e) => { e.stopPropagation(); startEdit(ins, "valorPago"); }}>
+                      {editingCell?.id === ins.id && editingCell.field === "valorPago" ? (
+                        <input autoFocus type="number" min="0" step="0.01"
+                          className="w-24 text-right border border-green-400 rounded px-1.5 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onBlur={() => saveEdit(ins)}
+                          onKeyDown={(e) => { if (e.key === "Enter") saveEdit(ins); if (e.key === "Escape") setEditingCell(null); }}
+                        />
+                      ) : (
+                        <span className="cursor-pointer hover:text-green-900 hover:underline decoration-dashed" title="Clique para editar">{formatarMoeda(ins.valorPago)}</span>
+                      )}
+                    </td>
+                    <td className={clsx("px-4 py-3 text-right font-semibold", ins.valorAPagar > 0 ? "text-red-600" : "text-green-600")} onClick={(e) => { e.stopPropagation(); startEdit(ins, "valorAPagar"); }}>
+                      {editingCell?.id === ins.id && editingCell.field === "valorAPagar" ? (
+                        <input autoFocus type="number" min="0" step="0.01"
+                          className="w-24 text-right border border-red-400 rounded px-1.5 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onBlur={() => saveEdit(ins)}
+                          onKeyDown={(e) => { if (e.key === "Enter") saveEdit(ins); if (e.key === "Escape") setEditingCell(null); }}
+                        />
+                      ) : (
+                        <span className="cursor-pointer hover:underline decoration-dashed" title="Clique para editar">{formatarMoeda(ins.valorAPagar)}</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                      {editingCell?.id === ins.id && editingCell.field === "status" ? (
+                        <select autoFocus
+                          className="text-xs border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                          value={editValue}
+                          onChange={(e) => {
+                            const newStatus = e.target.value as StatusInscricao;
+                            setEditingCell(null);
+                            atualizarInscricao(ins.id, { status: newStatus });
+                          }}
+                          onBlur={() => setEditingCell(null)}
+                        >
+                          <option value="pendente">Pendente</option>
+                          <option value="confirmado">Confirmado</option>
+                          <option value="cancelado">Cancelado</option>
+                        </select>
+                      ) : (
+                        <span className={`badge-${ins.status} cursor-pointer`} onClick={() => startEdit(ins, "status")} title="Clique para editar">
+                          {LABEL_STATUS[ins.status]}
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-2" onClick={(e) => e.stopPropagation()}>
