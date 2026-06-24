@@ -74,9 +74,26 @@ export function formatarCPF(cpf: string): string {
 
 export function formatarTelefone(tel: string): string {
   const nums = tel.replace(/\D/g, "");
-  if (nums.length === 11) return nums.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
-  if (nums.length === 10) return nums.replace(/(\d{2})(\d{4})(\d{4})/, "($1) $2-$3");
+  // Strip leading country code 55 if present
+  const local = nums.startsWith("55") && nums.length > 11 ? nums.slice(2) : nums;
+  if (local.length === 11) return `+55 (${local.slice(0, 2)}) ${local.slice(2, 7)}-${local.slice(7)}`;
+  if (local.length === 10) return `+55 (${local.slice(0, 2)}) ${local.slice(2, 6)}-${local.slice(6)}`;
   return tel;
+}
+
+export function whatsAppLink(tel: string): string {
+  const nums = tel.replace(/\D/g, "");
+  const comDDI = nums.startsWith("55") ? nums : `55${nums}`;
+  return `https://wa.me/${comDDI}`;
+}
+
+export function inferirGenero(nome: string): "masculino" | "feminino" {
+  const primeiro = nome.trim().split(" ")[0].toLowerCase()
+    .normalize("NFD").replace(/[̀-ͯ]/g, "");
+  if (primeiro.endsWith("a")) return "feminino";
+  if (primeiro.endsWith("ane") || primeiro.endsWith("iane")) return "feminino";
+  if (primeiro.endsWith("elle") || primeiro.endsWith("ice")) return "feminino";
+  return "masculino";
 }
 
 export function formatarMoeda(valor: number): string {

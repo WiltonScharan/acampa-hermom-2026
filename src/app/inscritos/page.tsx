@@ -9,7 +9,8 @@ import {
   LABEL_STATUS,
   LABEL_TIPO_QUARTO,
 } from "@/lib/utils";
-import { excluirInscricao } from "@/lib/firestore";
+import { excluirInscricao, atualizarInscricao } from "@/lib/firestore";
+import { calcularValorTotal, formatarTelefone, whatsAppLink } from "@/lib/utils";
 import {
   Plus,
   Search,
@@ -18,6 +19,7 @@ import {
   Bus,
   ChevronDown,
   ChevronUp,
+  MessageCircle,
 } from "lucide-react";
 import clsx from "clsx";
 import { InscricaoComCalculo } from "@/types";
@@ -49,9 +51,22 @@ export default function InscritosPage() {
       return sort.dir === "asc" ? v : -v;
     });
 
+  const [togglingOnibus, setTogglingOnibus] = useState<string | null>(null);
+
   async function handleExcluir(id: string, nome: string) {
     if (!confirm(`Excluir inscrição de "${nome}"?`)) return;
     await excluirInscricao(id);
+  }
+
+  async function handleToggleOnibus(ins: InscricaoComCalculo) {
+    setTogglingOnibus(ins.id);
+    try {
+      const novoOnibus = !ins.onibus;
+      const novoTotal = calcularValorTotal(ins.dataNascimento, ins.tipoQuarto, novoOnibus);
+      await atualizarInscricao(ins.id, { onibus: novoOnibus, valorTotal: novoTotal });
+    } finally {
+      setTogglingOnibus(null);
+    }
   }
 
   function toggleSort(col: keyof InscricaoComCalculo) {
@@ -137,6 +152,9 @@ export default function InscritosPage() {
                 <th className="text-left px-4 py-3 font-semibold text-gray-600">Comprador</th>
                 <th className="text-left px-4 py-3 font-semibold text-gray-600">Categoria</th>
                 <th className="text-left px-4 py-3 font-semibold text-gray-600">Quarto</th>
+                <th className="text-center px-4 py-3 font-semibold text-gray-600">
+                  <span className="flex items-center justify-center gap-1"><Bus size={14} /> Ônibus</span>
+                </th>
                 <th className="text-right px-4 py-3 font-semibold text-gray-600">Total</th>
                 <th className="text-right px-4 py-3 font-semibold text-gray-600">Pago</th>
                 <th className="text-right px-4 py-3 font-semibold text-gray-600 text-red-600">A Pagar</th>
@@ -147,7 +165,7 @@ export default function InscritosPage() {
             <tbody className="divide-y divide-gray-100">
               {filtrados.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="text-center py-12 text-gray-400">
+                  <td colSpan={10} className="text-center py-12 text-gray-400">
                     Nenhum inscrito encontrado.
                   </td>
                 </tr>
@@ -168,6 +186,21 @@ export default function InscritosPage() {
                     <td className="px-4 py-3 text-gray-600">{ins.nomeComprador}</td>
                     <td className="px-4 py-3 text-gray-600">{ins.labelCategoria}</td>
                     <td className="px-4 py-3 text-gray-600">{LABEL_TIPO_QUARTO[ins.tipoQuarto]}</td>
+                    <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => handleToggleOnibus(ins)}
+                        disabled={togglingOnibus === ins.id}
+                        title={ins.onibus ? "Remover ônibus (−R$150)" : "Adicionar ônibus (+R$150)"}
+                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border transition-colors ${
+                          ins.onibus
+                            ? "bg-primary-100 text-primary-700 border-primary-300 hover:bg-primary-200"
+                            : "bg-gray-100 text-gray-400 border-gray-200 hover:bg-gray-200"
+                        }`}
+                      >
+                        <Bus size={12} />
+                        {ins.onibus ? "Sim" : "Não"}
+                      </button>
+                    </td>
                     <td className="px-4 py-3 text-right font-medium">{formatarMoeda(ins.valorTotal)}</td>
                     <td className="px-4 py-3 text-right text-green-700">{formatarMoeda(ins.valorPago)}</td>
                     <td className={clsx("px-4 py-3 text-right font-semibold", ins.valorAPagar > 0 ? "text-red-600" : "text-green-600")}>
@@ -193,16 +226,32 @@ export default function InscritosPage() {
                   </tr>
                   {expandido === ins.id && (
                     <tr key={`${ins.id}-detail`} className="bg-orange-50">
-                      <td colSpan={9} className="px-6 py-4">
+                      <td colSpan={10} className="px-6 py-4">
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                           <div><span className="text-gray-500">Nascimento:</span> <span className="font-medium">{formatarData(ins.dataNascimento)}</span></div>
                           <div><span className="text-gray-500">Gênero:</span> <span className="font-medium capitalize">{ins.genero}</span></div>
                           <div><span className="text-gray-500">CPF:</span> <span className="font-medium">{ins.cpf || "—"}</span></div>
-                          <div><span className="text-gray-500">Telefone:</span> <span className="font-medium">{ins.telefone || "—"}</span></div>
+                          <div>
+                            <span className="text-gray-500">Telefone:</span>{" "}
+                            {ins.telefone ? (
+                              <span className="inline-flex items-center gap-1.5 font-medium">
+                                {formatarTelefone(ins.telefone)}
+                                <a
+                                  href={whatsAppLink(ins.telefone)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  title="Abrir no WhatsApp"
+                                  className="text-green-500 hover:text-green-700"
+                                >
+                                  <MessageCircle size={15} />
+                                </a>
+                              </span>
+                            ) : <span className="font-medium">—</span>}
+                          </div>
                           <div><span className="text-gray-500">E-mail:</span> <span className="font-medium">{ins.email || "—"}</span></div>
                           <div><span className="text-gray-500">Pagamento:</span> <span className="font-medium">{ins.formaPagamento || "—"}</span></div>
                           <div><span className="text-gray-500">Comprovantes:</span> <span className="font-medium">{ins.comprovantes?.length || 0}</span></div>
-                          <div><span className="text-gray-500">Ônibus:</span> <span className="font-medium">{ins.onibus ? "Sim" : "Não"}</span></div>
                           {ins.observacoes && (
                             <div className="col-span-4">
                               <span className="text-gray-500">Observação:</span>{" "}

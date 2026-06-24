@@ -3,7 +3,7 @@
 import { useState } from "react";
 import * as XLSX from "xlsx";
 import { criarInscricao, listarInscricoes, contarInscricoesImportadas, excluirInscricoesImportadas } from "@/lib/firestore";
-import { calcularValorTotal } from "@/lib/utils";
+import { calcularValorTotal, inferirGenero } from "@/lib/utils";
 import { InscricaoForm, TipoQuarto, Genero } from "@/types";
 import { Upload, CheckCircle, AlertCircle, Download, Info, Users, UserCheck, Trash2 } from "lucide-react";
 
@@ -141,7 +141,9 @@ function converterLinha(row: LinhaRaw): InscricaoForm | null {
     (onibusStr.includes("sim") || onibusStr.includes("onibus") || onibusStr.includes("ônibus"));
 
   const generoStr = norm(row.genero || "");
-  const genero: Genero = generoStr.startsWith("f") ? "feminino" : "masculino";
+  const genero: Genero = generoStr.startsWith("f") ? "feminino"
+    : generoStr.startsWith("m") ? "masculino"
+    : inferirGenero(nome);
 
   const pagStr = norm(row.formaPagamento || "");
   const formaPagamento = (pagStr.includes("pix") ? "pix" :
