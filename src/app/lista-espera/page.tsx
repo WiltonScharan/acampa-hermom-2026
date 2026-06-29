@@ -114,7 +114,7 @@ export default function ListaEsperaPage() {
             <tr>
               <th className="text-center px-4 py-3 font-semibold text-gray-500 w-12">#</th>
               <th className="text-left px-4 py-3 font-semibold text-gray-600">Nome do Casal</th>
-              <th className="text-left px-4 py-3 font-semibold text-gray-600">Telefone</th>
+              <th className="text-left px-4 py-3 font-semibold text-gray-600 whitespace-nowrap w-52">Telefone</th>
               <th className="text-left px-4 py-3 font-semibold text-gray-600">Observações</th>
               <th className="text-center px-4 py-3 font-semibold text-gray-600 w-24">Ações</th>
             </tr>
@@ -191,7 +191,7 @@ export default function ListaEsperaPage() {
                   <>
                     {/* Modo visualização */}
                     <td className="px-4 py-3 font-medium text-gray-900">{item.nomeCasal}</td>
-                    <td className="px-4 py-3 text-gray-600">
+                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
                       {item.telefone ? (
                         <span className="inline-flex items-center gap-1.5">
                           {formatarTelefone(item.telefone)}
