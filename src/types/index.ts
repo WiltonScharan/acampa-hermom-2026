@@ -48,6 +48,14 @@ export interface Inscricao {
 
 export type InscricaoForm = Omit<Inscricao, "id" | "criadoEm" | "atualizadoEm" | "comprovantes">;
 
+export interface ItemListaEspera {
+  id: string;
+  nomeCasal: string;
+  telefone: string;
+  observacoes: string;
+  criadoEm: Timestamp | null;
+}
+
 export interface InscricaoComCalculo extends Inscricao {
   idadeNaData: number;
   categoria: CategoriaIdade;

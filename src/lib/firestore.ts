@@ -14,7 +14,7 @@ import {
   writeBatch,
 } from "firebase/firestore";
 import { db } from "./firebase";
-import { Inscricao, InscricaoForm } from "@/types";
+import { Inscricao, InscricaoForm, ItemListaEspera } from "@/types";
 
 const COLLECTION = "inscricoes";
 
@@ -75,6 +75,34 @@ export async function excluirInscricoesImportadas(): Promise<number> {
   snap.docs.forEach((d) => batch.delete(d.ref));
   await batch.commit();
   return snap.size;
+}
+
+// ─── Lista de Espera Village ────────────────────────────────────────────────
+
+const LISTA_ESPERA = "listaEsperaVillage";
+
+export function ouvirListaEspera(callback: (items: ItemListaEspera[]) => void) {
+  const q = query(collection(db, LISTA_ESPERA), orderBy("criadoEm"));
+  return onSnapshot(q, (snapshot) => {
+    const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as ItemListaEspera));
+    callback(data);
+  });
+}
+
+export async function adicionarListaEspera(dados: Omit<ItemListaEspera, "id" | "criadoEm">): Promise<string> {
+  const ref = await addDoc(collection(db, LISTA_ESPERA), {
+    ...dados,
+    criadoEm: serverTimestamp(),
+  });
+  return ref.id;
+}
+
+export async function atualizarListaEspera(id: string, dados: Partial<Omit<ItemListaEspera, "id" | "criadoEm">>): Promise<void> {
+  await updateDoc(doc(db, LISTA_ESPERA, id), dados);
+}
+
+export async function excluirListaEspera(id: string): Promise<void> {
+  await deleteDoc(doc(db, LISTA_ESPERA, id));
 }
 
 export async function atualizarComprovantes(

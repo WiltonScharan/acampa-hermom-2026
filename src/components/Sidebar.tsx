@@ -18,6 +18,7 @@ import {
   Tent,
   Info,
   FileText,
+  ListOrdered,
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -25,6 +26,7 @@ const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/inscritos", label: "Inscritos", icon: Users },
   { href: "/village", label: "Village", icon: Home },
+  { href: "/lista-espera", label: "Lista de Espera Village", icon: ListOrdered },
   { href: "/melhor-idade", label: "Melhor Idade 60+", icon: Star },
   { href: "/criancas", label: "Crianças até 05", icon: Baby },
   { href: "/adolescentes-06-10", label: "Adolesc. 06-10", icon: PersonStanding },
