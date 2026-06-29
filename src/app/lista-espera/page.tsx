@@ -85,7 +85,7 @@ export default function ListaEsperaPage() {
   }
 
   return (
-    <div className="p-6 space-y-5 max-w-3xl">
+    <div className="p-6 space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -113,7 +113,7 @@ export default function ListaEsperaPage() {
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
               <th className="text-center px-4 py-3 font-semibold text-gray-500 w-12">#</th>
-              <th className="text-left px-4 py-3 font-semibold text-gray-600">Nome do Casal</th>
+              <th className="text-left px-4 py-3 font-semibold text-gray-600 w-80">Nome do Casal</th>
               <th className="text-left px-4 py-3 font-semibold text-gray-600 whitespace-nowrap w-52">Telefone</th>
               <th className="text-left px-4 py-3 font-semibold text-gray-600">Observações</th>
               <th className="text-center px-4 py-3 font-semibold text-gray-600 w-24">Ações</th>
