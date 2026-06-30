@@ -3,7 +3,7 @@
 import { useState } from "react";
 import * as XLSX from "xlsx";
 import { criarInscricao, listarInscricoes, contarInscricoesImportadas, excluirInscricoesImportadas } from "@/lib/firestore";
-import { calcularValorTotal, inferirGenero } from "@/lib/utils";
+import { calcularValorTotal, inferirGenero, determinarCategoria, calcularIdadeNaData } from "@/lib/utils";
 import { InscricaoForm, TipoQuarto, Genero } from "@/types";
 import { Upload, CheckCircle, AlertCircle, Download, Info, Users, UserCheck, Trash2 } from "lucide-react";
 
@@ -116,13 +116,19 @@ function parseXLSX(buffer: ArrayBuffer): LinhaRaw[] {
   return parseLinhas(cabecalho, valores);
 }
 
-// Chave única: CPF (primário) ou nome+dataNasc (fallback)
-function chaveDedup(row: LinhaRaw): string {
-  const cpf = (row.cpf || "").replace(/\D/g, "");
-  if (cpf.length >= 11) return `cpf:${cpf}`;
-  const nome = norm(row.nome || "");
-  const dt = converterData(row.dataNascimento || "");
-  return `nome:${nome}:${dt}`;
+// Chave de dedup: Nome + Comprador + Categoria + Quarto
+function chaveQuatro(nomePart: string, comprador: string, dataNasc: string, tipoQuarto: TipoQuarto): string {
+  const categoria = dataNasc ? determinarCategoria(calcularIdadeNaData(dataNasc)) : "";
+  return `${norm(nomePart)}|${norm(comprador)}|${categoria}|${tipoQuarto}`;
+}
+
+function chaveQuatroDaLinha(row: LinhaRaw): string {
+  const nome = row.nome?.trim() || "";
+  const comprador = row.nomeComprador?.trim() || nome;
+  const dob = converterData(row.dataNascimento?.trim() || "");
+  const tipoStr = norm(row.tipoQuarto || "");
+  const tipoQuarto: TipoQuarto = tipoStr.includes("village") ? "village" : "coletivo";
+  return chaveQuatro(nome, comprador, dob, tipoQuarto);
 }
 
 function converterLinha(row: LinhaRaw): InscricaoForm | null {
@@ -184,6 +190,7 @@ export default function BaseDadosPage() {
   const [totalImportados, setTotalImportados] = useState<number | null>(null);
   const [excluindo, setExcluindo] = useState(false);
   const [headersBrutos, setHeadersBrutos] = useState<string[]>([]);
+  const [incluirExistentes, setIncluirExistentes] = useState(false);
 
   async function processarLinhas(linhas: LinhaRaw[]) {
     setHeadersBrutos([..._ultimosHeadersBrutos]);
@@ -192,30 +199,28 @@ export default function BaseDadosPage() {
     setResultados([]);
     try {
       const inscritos = await listarInscricoes();
+
+      // Chave Firebase: Nome + Comprador + Categoria + Quarto
       const chavesExistentes = new Set<string>();
       for (const i of inscritos) {
-        const cpf = (i.cpf || "").replace(/\D/g, "");
-        if (cpf.length >= 11) chavesExistentes.add(`cpf:${cpf}`);
-        chavesExistentes.add(`nome:${norm(i.nome)}:${i.dataNascimento}`);
+        chavesExistentes.add(chaveQuatro(i.nome, i.nomeComprador, i.dataNascimento, i.tipoQuarto));
       }
 
-      // Deduplicar a própria planilha por nome+dob (CPF pode ser o do comprador para toda a família)
+      // Deduplicar a própria planilha pela mesma chave (mesma pessoa aparecendo 2x)
       const vistosNaPlanilha = new Set<string>();
       const linhasUnicas: LinhaRaw[] = [];
       for (const linha of linhas) {
-        const nomeNorm = norm(linha.nome || "");
-        if (!nomeNorm) continue;
-        const chaveInterna = `${nomeNorm}:${converterData(linha.dataNascimento?.trim() || "")}`;
-        if (vistosNaPlanilha.has(chaveInterna)) continue;
-        vistosNaPlanilha.add(chaveInterna);
+        if (!norm(linha.nome || "")) continue;
+        const chave = chaveQuatroDaLinha(linha);
+        if (vistosNaPlanilha.has(chave)) continue;
+        vistosNaPlanilha.add(chave);
         linhasUnicas.push(linha);
       }
 
       const nov: LinhaRaw[] = [];
       const ex: LinhaRaw[] = [];
       for (const linha of linhasUnicas) {
-        const chave = chaveDedup(linha);
-        (chavesExistentes.has(chave) ? ex : nov).push(linha);
+        (chavesExistentes.has(chaveQuatroDaLinha(linha)) ? ex : nov).push(linha);
       }
       setNovas(nov);
       setExistentes(ex);
@@ -268,7 +273,8 @@ export default function BaseDadosPage() {
   async function handleImportar() {
     setImportando(true);
     const res: ResultadoImport[] = [];
-    for (const linha of novas) {
+    const linhasParaImportar = incluirExistentes ? [...novas, ...existentes] : novas;
+    for (const linha of linhasParaImportar) {
       const dados = converterLinha(linha);
       if (!dados) {
         res.push({ nome: linha.nome || "(sem nome)", status: "erro", mensagem: "Nome ou data de nascimento ausente" });
@@ -294,7 +300,7 @@ export default function BaseDadosPage() {
   }
 
   function limpar() {
-    setNovas([]); setExistentes([]); setResultados([]); setTexto("");
+    setNovas([]); setExistentes([]); setResultados([]); setTexto(""); setIncluirExistentes(false);
   }
 
   async function verificarImportados() {
@@ -445,13 +451,26 @@ export default function BaseDadosPage() {
               <p className="text-3xl font-bold text-gray-800">{novas.length}</p>
               <p className="text-xs text-gray-500 mt-1">Não encontrados no sistema</p>
             </div>
-            <div className="card border-l-4 border-l-gray-300">
+            <div className={`card border-l-4 transition-colors ${incluirExistentes ? "border-l-amber-400 bg-amber-50" : "border-l-gray-300"}`}>
               <div className="flex items-center gap-2 mb-1">
-                <UserCheck size={16} className="text-gray-500" />
-                <span className="font-semibold text-gray-500">Já cadastrados — serão ignorados</span>
+                <UserCheck size={16} className={incluirExistentes ? "text-amber-600" : "text-gray-500"} />
+                <span className={`font-semibold ${incluirExistentes ? "text-amber-700" : "text-gray-500"}`}>
+                  Já cadastrados — {incluirExistentes ? "serão reimportados" : "serão ignorados"}
+                </span>
               </div>
-              <p className="text-3xl font-bold text-gray-400">{existentes.length}</p>
-              <p className="text-xs text-gray-400 mt-1">Identificados por CPF ou nome + data de nascimento</p>
+              <p className={`text-3xl font-bold ${incluirExistentes ? "text-amber-700" : "text-gray-400"}`}>{existentes.length}</p>
+              <p className="text-xs text-gray-400 mt-1">Mesmos Nome + Comprador + Categoria + Quarto</p>
+              {existentes.length > 0 && (
+                <label className="flex items-center gap-2 mt-3 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={incluirExistentes}
+                    onChange={(e) => setIncluirExistentes(e.target.checked)}
+                    className="w-4 h-4 accent-amber-500"
+                  />
+                  <span className="text-xs font-medium text-gray-600">Importar mesmo assim</span>
+                </label>
+              )}
             </div>
           </div>
 
@@ -513,10 +532,10 @@ export default function BaseDadosPage() {
 
           {/* Ações */}
           <div className="flex gap-3">
-            {novas.length > 0 && (
+            {(novas.length > 0 || incluirExistentes) && (
               <button onClick={handleImportar} disabled={importando} className="btn-primary flex items-center gap-2">
                 <Upload size={16} />
-                {importando ? "Importando..." : `Importar ${novas.length} novo(s)`}
+                {importando ? "Importando..." : `Importar ${novas.length + (incluirExistentes ? existentes.length : 0)} registro(s)`}
               </button>
             )}
             <button onClick={limpar} className="btn-secondary">
