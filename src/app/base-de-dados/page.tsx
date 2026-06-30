@@ -199,13 +199,15 @@ export default function BaseDadosPage() {
         chavesExistentes.add(`nome:${norm(i.nome)}:${i.dataNascimento}`);
       }
 
-      // Deduplicar a própria planilha (mesma pessoa pode aparecer 2x se comprou vários itens)
+      // Deduplicar a própria planilha por nome+dob (CPF pode ser o do comprador para toda a família)
       const vistosNaPlanilha = new Set<string>();
       const linhasUnicas: LinhaRaw[] = [];
       for (const linha of linhas) {
-        const chave = chaveDedup(linha);
-        if (!chave || vistosNaPlanilha.has(chave)) continue;
-        vistosNaPlanilha.add(chave);
+        const nomeNorm = norm(linha.nome || "");
+        if (!nomeNorm) continue;
+        const chaveInterna = `${nomeNorm}:${converterData(linha.dataNascimento?.trim() || "")}`;
+        if (vistosNaPlanilha.has(chaveInterna)) continue;
+        vistosNaPlanilha.add(chaveInterna);
         linhasUnicas.push(linha);
       }
 
