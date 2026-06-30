@@ -3,7 +3,7 @@
 import { useState } from "react";
 import * as XLSX from "xlsx";
 import { criarInscricao, listarInscricoes, contarInscricoesImportadas, excluirInscricoesImportadas } from "@/lib/firestore";
-import { calcularValorTotal, inferirGenero, determinarCategoria, calcularIdadeNaData } from "@/lib/utils";
+import { calcularValorTotal, inferirGenero } from "@/lib/utils";
 import { InscricaoForm, TipoQuarto, Genero } from "@/types";
 import { Upload, CheckCircle, AlertCircle, Download, Info, Users, UserCheck, Trash2 } from "lucide-react";
 
@@ -116,10 +116,10 @@ function parseXLSX(buffer: ArrayBuffer): LinhaRaw[] {
   return parseLinhas(cabecalho, valores);
 }
 
-// Chave de dedup: Nome + Comprador + Categoria + Quarto
+// Chave de dedup: Nome + Comprador + DataNascimento + Quarto
+// (DataNasc é mais preciso que Categoria — evita falsa colisão entre pessoas de mesmo nome na mesma faixa etária)
 function chaveQuatro(nomePart: string, comprador: string, dataNasc: string, tipoQuarto: TipoQuarto): string {
-  const categoria = dataNasc ? determinarCategoria(calcularIdadeNaData(dataNasc)) : "";
-  return `${norm(nomePart)}|${norm(comprador)}|${categoria}|${tipoQuarto}`;
+  return `${norm(nomePart)}|${norm(comprador)}|${dataNasc}|${tipoQuarto}`;
 }
 
 function chaveQuatroDaLinha(row: LinhaRaw): string {
@@ -459,7 +459,7 @@ export default function BaseDadosPage() {
                 </span>
               </div>
               <p className={`text-3xl font-bold ${incluirExistentes ? "text-amber-700" : "text-gray-400"}`}>{existentes.length}</p>
-              <p className="text-xs text-gray-400 mt-1">Mesmos Nome + Comprador + Categoria + Quarto</p>
+              <p className="text-xs text-gray-400 mt-1">Mesmos Nome + Comprador + Data Nasc. + Quarto</p>
               {existentes.length > 0 && (
                 <label className="flex items-center gap-2 mt-3 cursor-pointer select-none">
                   <input
