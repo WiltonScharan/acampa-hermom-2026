@@ -199,11 +199,21 @@ export default function BaseDadosPage() {
         chavesExistentes.add(`nome:${norm(i.nome)}:${i.dataNascimento}`);
       }
 
-      const nov: LinhaRaw[] = [];
-      const ex: LinhaRaw[] = [];
+      // Deduplicar a própria planilha (mesma pessoa pode aparecer 2x se comprou vários itens)
+      const vistosNaPlanilha = new Set<string>();
+      const linhasUnicas: LinhaRaw[] = [];
       for (const linha of linhas) {
         const chave = chaveDedup(linha);
-        (chave && chavesExistentes.has(chave) ? ex : nov).push(linha);
+        if (!chave || vistosNaPlanilha.has(chave)) continue;
+        vistosNaPlanilha.add(chave);
+        linhasUnicas.push(linha);
+      }
+
+      const nov: LinhaRaw[] = [];
+      const ex: LinhaRaw[] = [];
+      for (const linha of linhasUnicas) {
+        const chave = chaveDedup(linha);
+        (chavesExistentes.has(chave) ? ex : nov).push(linha);
       }
       setNovas(nov);
       setExistentes(ex);
