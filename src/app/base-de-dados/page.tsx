@@ -191,6 +191,7 @@ export default function BaseDadosPage() {
   const [excluindo, setExcluindo] = useState(false);
   const [headersBrutos, setHeadersBrutos] = useState<string[]>([]);
   const [incluirExistentes, setIncluirExistentes] = useState(false);
+  const [descartadas, setDescartadas] = useState<LinhaRaw[]>([]);
 
   async function processarLinhas(linhas: LinhaRaw[]) {
     setHeadersBrutos([..._ultimosHeadersBrutos]);
@@ -207,13 +208,17 @@ export default function BaseDadosPage() {
       }
 
       // Deduplicar a própria planilha pela mesma chave (mesma pessoa aparecendo 2x)
-      const vistosNaPlanilha = new Set<string>();
+      const vistosNaPlanilha = new Map<string, LinhaRaw>(); // chave → primeira ocorrência
       const linhasUnicas: LinhaRaw[] = [];
+      const desc: LinhaRaw[] = [];
       for (const linha of linhas) {
         if (!norm(linha.nome || "")) continue;
         const chave = chaveQuatroDaLinha(linha);
-        if (vistosNaPlanilha.has(chave)) continue;
-        vistosNaPlanilha.add(chave);
+        if (vistosNaPlanilha.has(chave)) {
+          desc.push(linha); // registra descartada para diagnóstico
+          continue;
+        }
+        vistosNaPlanilha.set(chave, linha);
         linhasUnicas.push(linha);
       }
 
@@ -224,6 +229,7 @@ export default function BaseDadosPage() {
       }
       setNovas(nov);
       setExistentes(ex);
+      setDescartadas(desc);
     } finally {
       setVerificando(false);
     }
@@ -300,7 +306,7 @@ export default function BaseDadosPage() {
   }
 
   function limpar() {
-    setNovas([]); setExistentes([]); setResultados([]); setTexto(""); setIncluirExistentes(false);
+    setNovas([]); setExistentes([]); setResultados([]); setTexto(""); setIncluirExistentes(false); setDescartadas([]);
   }
 
   async function verificarImportados() {
@@ -522,6 +528,38 @@ export default function BaseDadosPage() {
                         {colunasMapeadas.map((k) => (
                           <td key={k} className="py-1.5 pr-3 text-gray-500 max-w-[160px] truncate">{row[k] || "—"}</td>
                         ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </details>
+          )}
+
+          {/* Linhas descartadas como duplicata da própria planilha */}
+          {descartadas.length > 0 && (
+            <details className="card bg-orange-50 border-orange-200">
+              <summary className="cursor-pointer text-sm font-medium text-orange-700 select-none flex items-center gap-2">
+                <AlertCircle size={15} />
+                {descartadas.length} linha(s) removida(s) como duplicata interna da planilha (clique para ver)
+              </summary>
+              <p className="text-xs text-orange-600 mt-2 mb-3">
+                Essas linhas têm exatamente os mesmos Nome + Comprador + Data Nasc. + Quarto de outra linha da planilha e foram ignoradas.
+              </p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead><tr className="border-b">
+                    {["Nome", "Comprador", "Data Nasc.", "Quarto"].map(h => (
+                      <th key={h} className="text-left pb-1.5 pr-3 font-medium text-orange-600">{h}</th>
+                    ))}
+                  </tr></thead>
+                  <tbody>
+                    {descartadas.map((r, i) => (
+                      <tr key={i} className="border-b border-orange-100">
+                        <td className="py-1.5 pr-3">{r.nome || "—"}</td>
+                        <td className="py-1.5 pr-3">{r.nomeComprador || "—"}</td>
+                        <td className="py-1.5 pr-3">{r.dataNascimento || "—"}</td>
+                        <td className="py-1.5 pr-3">{r.tipoQuarto || "—"}</td>
                       </tr>
                     ))}
                   </tbody>
