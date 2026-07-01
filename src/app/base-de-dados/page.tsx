@@ -192,6 +192,7 @@ export default function BaseDadosPage() {
   const [headersBrutos, setHeadersBrutos] = useState<string[]>([]);
   const [incluirExistentes, setIncluirExistentes] = useState(false);
   const [descartadas, setDescartadas] = useState<LinhaRaw[]>([]);
+  const [descSelecionadas, setDescSelecionadas] = useState<Set<number>>(new Set());
 
   async function processarLinhas(linhas: LinhaRaw[]) {
     setHeadersBrutos([..._ultimosHeadersBrutos]);
@@ -282,7 +283,8 @@ export default function BaseDadosPage() {
   async function handleImportar() {
     setImportando(true);
     const res: ResultadoImport[] = [];
-    const linhasParaImportar = incluirExistentes ? [...novas, ...existentes] : novas;
+    const descLinhas = descartadas.filter((_, i) => descSelecionadas.has(i));
+    const linhasParaImportar = [...novas, ...descLinhas, ...(incluirExistentes ? existentes : [])];
     for (const linha of linhasParaImportar) {
       const dados = converterLinha(linha);
       if (!dados) {
@@ -309,7 +311,7 @@ export default function BaseDadosPage() {
   }
 
   function limpar() {
-    setNovas([]); setExistentes([]); setResultados([]); setTexto(""); setIncluirExistentes(false); setDescartadas([]);
+    setNovas([]); setExistentes([]); setResultados([]); setTexto(""); setIncluirExistentes(false); setDescartadas([]); setDescSelecionadas(new Set());
   }
 
   async function verificarImportados() {
@@ -338,6 +340,31 @@ export default function BaseDadosPage() {
   const sucessos = resultados.filter((r) => r.status === "ok").length;
   const erros = resultados.filter((r) => r.status === "erro").length;
   const temDados = novas.length > 0 || existentes.length > 0;
+
+  // Descartadas: só "duplicata" pode ser reimportada (não "nome vazio")
+  const indicesImportaveis = descartadas.reduce<number[]>((acc, r, i) => {
+    if ((r as Record<string, string>)._motivo === "duplicata") acc.push(i);
+    return acc;
+  }, []);
+  const todasDescSelecionadas = indicesImportaveis.length > 0 && indicesImportaveis.every((i) => descSelecionadas.has(i));
+
+  function toggleDesc(idx: number) {
+    setDescSelecionadas((prev) => {
+      const next = new Set(prev);
+      if (next.has(idx)) next.delete(idx); else next.add(idx);
+      return next;
+    });
+  }
+
+  function toggleTodasDesc() {
+    if (todasDescSelecionadas) {
+      setDescSelecionadas(new Set());
+    } else {
+      setDescSelecionadas(new Set(indicesImportaveis));
+    }
+  }
+
+  const totalParaImportar = novas.length + descSelecionadas.size + (incluirExistentes ? existentes.length : 0);
 
   return (
     <div className="p-6 space-y-5 max-w-4xl">
@@ -543,31 +570,64 @@ export default function BaseDadosPage() {
 
           {/* Linhas descartadas como duplicata da própria planilha */}
           {descartadas.length > 0 && (
-            <details className="card bg-orange-50 border-orange-200">
+            <details className="card bg-orange-50 border-orange-200" open={descSelecionadas.size > 0}>
               <summary className="cursor-pointer text-sm font-medium text-orange-700 select-none flex items-center gap-2">
                 <AlertCircle size={15} />
-                {descartadas.length} linha(s) removida(s) como duplicata interna da planilha (clique para ver)
+                {descartadas.length} linha(s) removida(s) como duplicata interna da planilha
+                {descSelecionadas.size > 0 && (
+                  <span className="ml-1 bg-orange-200 text-orange-800 text-xs font-bold px-2 py-0.5 rounded-full">
+                    {descSelecionadas.size} selecionada(s) para importar
+                  </span>
+                )}
               </summary>
               <p className="text-xs text-orange-600 mt-2 mb-3">
-                Essas linhas têm exatamente os mesmos Nome + Comprador + Data Nasc. + Quarto de outra linha da planilha e foram ignoradas.
+                Essas linhas têm exatamente os mesmos Nome + Comprador + Data Nasc. + Quarto de outra linha da planilha e foram ignoradas. Marque as que deseja importar mesmo assim.
               </p>
+              {indicesImportaveis.length > 0 && (
+                <label className="flex items-center gap-2 mb-3 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={todasDescSelecionadas}
+                    onChange={toggleTodasDesc}
+                    className="w-4 h-4 accent-orange-500"
+                  />
+                  <span className="text-xs font-semibold text-orange-700">
+                    {todasDescSelecionadas ? "Desmarcar todos" : "Selecionar todos"}
+                  </span>
+                </label>
+              )}
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead><tr className="border-b">
+                    <th className="pb-1.5 pr-3 w-8" />
                     {["Nome", "Comprador", "Data Nasc.", "Quarto", "Motivo"].map(h => (
                       <th key={h} className="text-left pb-1.5 pr-3 font-medium text-orange-600">{h}</th>
                     ))}
                   </tr></thead>
                   <tbody>
-                    {descartadas.map((r, i) => (
-                      <tr key={i} className="border-b border-orange-100">
-                        <td className="py-1.5 pr-3 font-medium">{r.nome || <span className="italic text-orange-400">sem nome</span>}</td>
-                        <td className="py-1.5 pr-3">{r.nomeComprador || "—"}</td>
-                        <td className="py-1.5 pr-3">{r.dataNascimento || "—"}</td>
-                        <td className="py-1.5 pr-3">{r.tipoQuarto || "—"}</td>
-                        <td className="py-1.5 pr-3 text-orange-600 italic">{(r as Record<string,string>)._motivo}</td>
-                      </tr>
-                    ))}
+                    {descartadas.map((r, i) => {
+                      const importavel = (r as Record<string, string>)._motivo === "duplicata";
+                      const selecionada = descSelecionadas.has(i);
+                      return (
+                        <tr key={i} className={`border-b border-orange-100 ${selecionada ? "bg-orange-100" : ""}`}>
+                          <td className="py-1.5 pr-3">
+                            {importavel && (
+                              <input
+                                type="checkbox"
+                                checked={selecionada}
+                                onChange={() => toggleDesc(i)}
+                                className="w-4 h-4 accent-orange-500"
+                              />
+                            )}
+                          </td>
+                          <td className="py-1.5 pr-3 font-medium">{r.nome || <span className="italic text-orange-400">sem nome</span>}</td>
+                          <td className="py-1.5 pr-3">{r.nomeComprador || "—"}</td>
+                          <td className="py-1.5 pr-3">{r.dataNascimento || "—"}</td>
+                          <td className="py-1.5 pr-3">{r.tipoQuarto || "—"}</td>
+                          <td className="py-1.5 pr-3 text-orange-600 italic">{(r as Record<string, string>)._motivo}</td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -576,10 +636,10 @@ export default function BaseDadosPage() {
 
           {/* Ações */}
           <div className="flex gap-3">
-            {(novas.length > 0 || incluirExistentes) && (
+            {totalParaImportar > 0 && (
               <button onClick={handleImportar} disabled={importando} className="btn-primary flex items-center gap-2">
                 <Upload size={16} />
-                {importando ? "Importando..." : `Importar ${novas.length + (incluirExistentes ? existentes.length : 0)} registro(s)`}
+                {importando ? "Importando..." : `Importar ${totalParaImportar} registro(s)`}
               </button>
             )}
             <button onClick={limpar} className="btn-secondary">
