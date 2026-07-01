@@ -212,10 +212,13 @@ export default function BaseDadosPage() {
       const linhasUnicas: LinhaRaw[] = [];
       const desc: LinhaRaw[] = [];
       for (const linha of linhas) {
-        if (!norm(linha.nome || "")) continue;
+        if (!norm(linha.nome || "")) {
+          desc.push({ ...linha, _motivo: "nome vazio" } as LinhaRaw);
+          continue;
+        }
         const chave = chaveQuatroDaLinha(linha);
         if (vistosNaPlanilha.has(chave)) {
-          desc.push(linha); // registra descartada para diagnóstico
+          desc.push({ ...linha, _motivo: "duplicata" } as LinhaRaw);
           continue;
         }
         vistosNaPlanilha.set(chave, linha);
@@ -484,26 +487,28 @@ export default function BaseDadosPage() {
           {novas.length > 0 && colunasMapeadas.length > 0 && (
             <div className="card overflow-x-auto">
               <h3 className="font-semibold text-gray-700 mb-3">
-                Registros novos (primeiros {Math.min(novas.length, 10)} de {novas.length})
+                {novas.length} registro(s) novos para importar
               </h3>
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="border-b">
-                    {colunasMapeadas.map((k) => (
-                      <th key={k} className="text-left pb-1.5 pr-3 font-medium text-gray-500 whitespace-nowrap">{LABELS[k]}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {novas.slice(0, 10).map((row, i) => (
-                    <tr key={i}>
+              <div className="max-h-96 overflow-y-auto">
+                <table className="w-full text-xs">
+                  <thead className="sticky top-0 bg-white">
+                    <tr className="border-b">
                       {colunasMapeadas.map((k) => (
-                        <td key={k} className="py-1.5 pr-3 text-gray-700 max-w-[160px] truncate">{row[k] || "—"}</td>
+                        <th key={k} className="text-left pb-1.5 pr-3 font-medium text-gray-500 whitespace-nowrap">{LABELS[k]}</th>
                       ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {novas.map((row, i) => (
+                      <tr key={i}>
+                        {colunasMapeadas.map((k) => (
+                          <td key={k} className="py-1.5 pr-3 text-gray-700 max-w-[160px] truncate">{row[k] || "—"}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
@@ -549,17 +554,18 @@ export default function BaseDadosPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead><tr className="border-b">
-                    {["Nome", "Comprador", "Data Nasc.", "Quarto"].map(h => (
+                    {["Nome", "Comprador", "Data Nasc.", "Quarto", "Motivo"].map(h => (
                       <th key={h} className="text-left pb-1.5 pr-3 font-medium text-orange-600">{h}</th>
                     ))}
                   </tr></thead>
                   <tbody>
                     {descartadas.map((r, i) => (
                       <tr key={i} className="border-b border-orange-100">
-                        <td className="py-1.5 pr-3">{r.nome || "—"}</td>
+                        <td className="py-1.5 pr-3 font-medium">{r.nome || <span className="italic text-orange-400">sem nome</span>}</td>
                         <td className="py-1.5 pr-3">{r.nomeComprador || "—"}</td>
                         <td className="py-1.5 pr-3">{r.dataNascimento || "—"}</td>
                         <td className="py-1.5 pr-3">{r.tipoQuarto || "—"}</td>
+                        <td className="py-1.5 pr-3 text-orange-600 italic">{(r as Record<string,string>)._motivo}</td>
                       </tr>
                     ))}
                   </tbody>
