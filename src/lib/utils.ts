@@ -2,7 +2,7 @@ import { differenceInYears, parseISO } from "date-fns";
 import { CategoriaIdade, InscricaoComCalculo, Inscricao, TipoQuarto } from "@/types";
 
 // Data do evento para cálculo de idade
-export const DATA_EVENTO = new Date(2026, 10, 19); // 19 de novembro de 2026
+export const DATA_EVENTO = new Date(2026, 10, 22); // último dia do evento (22/11/2026) — quem faz aniversário em qualquer dia do evento já conta com a nova idade
 
 // Preços base
 export const PRECO_COLETIVO = 820;
