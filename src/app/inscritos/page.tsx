@@ -107,7 +107,7 @@ export default function InscritosPage() {
     setSalvandoPag(true);
     try {
       const novoHistorico = [...(modalPagIns.historicoPagamentos || []), { valor, data: novoPagData }];
-      const novoValorPago = modalPagIns.valorPago + valor;
+      const novoValorPago = (Number(modalPagIns.valorPago) || 0) + valor;
       const novoStatus: StatusInscricao =
         novoValorPago >= modalPagIns.valorTotal ? "confirmado" : modalPagIns.status;
       await atualizarInscricao(modalPagIns.id, {

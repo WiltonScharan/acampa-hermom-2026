@@ -58,11 +58,15 @@ export function calcularValorTotal(
 export function enriquecerInscricao(inscricao: Inscricao): InscricaoComCalculo {
   const idadeNaData = calcularIdadeNaData(inscricao.dataNascimento);
   const categoria = determinarCategoria(idadeNaData);
+  const valorTotal = Number(inscricao.valorTotal) || 0;
+  const valorPago = Number(inscricao.valorPago) || 0;
   return {
     ...inscricao,
+    valorTotal,
+    valorPago,
     idadeNaData,
     categoria,
-    valorAPagar: Math.max(0, inscricao.valorTotal - inscricao.valorPago),
+    valorAPagar: Math.max(0, valorTotal - valorPago),
     labelCategoria: LABELS_CATEGORIA[categoria],
   };
 }
