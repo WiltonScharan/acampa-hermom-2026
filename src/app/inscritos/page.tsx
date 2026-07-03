@@ -464,14 +464,14 @@ export default function InscritosPage() {
                   min="0"
                   step="0.01"
                   placeholder="Valor (R$)"
-                  className="input-field flex-1 text-sm"
+                  className="input-field flex-1 text-sm min-w-0"
                   value={novoPagValor}
                   onChange={(e) => setNovoPagValor(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter") handleAdicionarPagamento(); }}
                 />
                 <input
                   type="date"
-                  className="input-field text-sm"
+                  className="input-field text-sm w-36 flex-shrink-0"
                   value={novoPagData}
                   onChange={(e) => setNovoPagData(e.target.value)}
                 />
