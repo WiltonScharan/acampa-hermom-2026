@@ -18,6 +18,11 @@ export type CategoriaIdade =
   | "adultos_30_59"
   | "melhor_idade_60";
 
+export interface Pagamento {
+  valor: number;
+  data: string; // "YYYY-MM-DD"
+}
+
 export interface Inscricao {
   id: string;
   // Dados pessoais
@@ -36,6 +41,7 @@ export interface Inscricao {
   // Financeiro
   valorTotal: number;
   valorPago: number;
+  historicoPagamentos?: Pagamento[];
   formaPagamento: FormaPagamento | "";
   comprovantes: string[]; // Firebase Storage URLs
   // Controle

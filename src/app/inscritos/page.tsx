@@ -20,6 +20,8 @@ import {
   ChevronDown,
   ChevronUp,
   MessageCircle,
+  X,
+  CalendarDays,
 } from "lucide-react";
 import clsx from "clsx";
 import { InscricaoComCalculo, StatusInscricao } from "@/types";
@@ -52,8 +54,17 @@ export default function InscritosPage() {
     });
 
   const [togglingOnibus, setTogglingOnibus] = useState<string | null>(null);
-  const [editingCell, setEditingCell] = useState<{ id: string; field: "valorTotal" | "valorPago" | "valorAPagar" | "status" } | null>(null);
+  const [editingCell, setEditingCell] = useState<{ id: string; field: "valorTotal" | "status" } | null>(null);
   const [editValue, setEditValue] = useState("");
+
+  // Modal de pagamentos
+  const [modalPagInsId, setModalPagInsId] = useState<string | null>(null);
+  const modalPagIns = modalPagInsId
+    ? (inscricoes.find((i) => i.id === modalPagInsId) ?? null)
+    : null;
+  const [novoPagValor, setNovoPagValor] = useState("");
+  const [novoPagData, setNovoPagData] = useState(() => new Date().toISOString().split("T")[0]);
+  const [salvandoPag, setSalvandoPag] = useState(false);
 
   async function handleExcluir(id: string, nome: string) {
     if (!confirm(`Excluir inscrição de "${nome}"?`)) return;
@@ -71,11 +82,8 @@ export default function InscritosPage() {
     }
   }
 
-  function startEdit(ins: InscricaoComCalculo, field: "valorTotal" | "valorPago" | "valorAPagar" | "status") {
-    const val = field === "valorTotal" ? String(ins.valorTotal)
-      : field === "valorPago" ? String(ins.valorPago)
-      : field === "valorAPagar" ? String(ins.valorAPagar)
-      : ins.status;
+  function startEdit(ins: InscricaoComCalculo, field: "valorTotal" | "status") {
+    const val = field === "valorTotal" ? String(ins.valorTotal) : ins.status;
     setEditingCell({ id: ins.id, field });
     setEditValue(val);
   }
@@ -84,16 +92,44 @@ export default function InscritosPage() {
     if (!editingCell || editingCell.id !== ins.id) return;
     setEditingCell(null);
     const { field } = editingCell;
-    const num = parseFloat(editValue.replace(",", "."));
-    if (isNaN(num) || num < 0) return;
-    if (field === "valorTotal" && num !== ins.valorTotal) {
-      await atualizarInscricao(ins.id, { valorTotal: num });
-    } else if (field === "valorPago" && num !== ins.valorPago) {
-      await atualizarInscricao(ins.id, { valorPago: num });
-    } else if (field === "valorAPagar") {
-      const newPago = Math.max(0, ins.valorTotal - num);
-      if (newPago !== ins.valorPago) await atualizarInscricao(ins.id, { valorPago: newPago });
+    if (field === "valorTotal") {
+      const num = parseFloat(editValue.replace(",", "."));
+      if (!isNaN(num) && num >= 0 && num !== ins.valorTotal) {
+        await atualizarInscricao(ins.id, { valorTotal: num });
+      }
     }
+  }
+
+  async function handleAdicionarPagamento() {
+    if (!modalPagIns) return;
+    const valor = parseFloat(novoPagValor.replace(",", "."));
+    if (isNaN(valor) || valor <= 0) return;
+    setSalvandoPag(true);
+    try {
+      const novoHistorico = [...(modalPagIns.historicoPagamentos || []), { valor, data: novoPagData }];
+      const novoValorPago = modalPagIns.valorPago + valor;
+      const novoStatus: StatusInscricao =
+        novoValorPago >= modalPagIns.valorTotal ? "confirmado" : modalPagIns.status;
+      await atualizarInscricao(modalPagIns.id, {
+        historicoPagamentos: novoHistorico,
+        valorPago: novoValorPago,
+        status: novoStatus,
+      });
+      setNovoPagValor("");
+      setNovoPagData(new Date().toISOString().split("T")[0]);
+    } finally {
+      setSalvandoPag(false);
+    }
+  }
+
+  async function handleRemoverPagamento(ins: InscricaoComCalculo, idx: number, valor: number) {
+    if (!confirm(`Remover pagamento de ${formatarMoeda(valor)}?`)) return;
+    const novaLista = (ins.historicoPagamentos || []).filter((_, i) => i !== idx);
+    const novoValorPago = Math.max(0, ins.valorPago - valor);
+    await atualizarInscricao(ins.id, {
+      historicoPagamentos: novaLista,
+      valorPago: novoValorPago,
+    });
   }
 
   function toggleSort(col: keyof InscricaoComCalculo) {
@@ -114,6 +150,10 @@ export default function InscritosPage() {
       </div>
     );
   }
+
+  // Dados do modal
+  const sumHistory = (modalPagIns?.historicoPagamentos || []).reduce((s, p) => s + p.valor, 0);
+  const saldoAnterior = modalPagIns ? Math.max(0, modalPagIns.valorPago - sumHistory) : 0;
 
   return (
     <div className="p-6 space-y-5">
@@ -228,6 +268,7 @@ export default function InscritosPage() {
                         {ins.onibus ? "Sim" : "Não"}
                       </button>
                     </td>
+                    {/* Total — inline edit */}
                     <td className="px-4 py-3 text-right font-medium" onClick={(e) => { e.stopPropagation(); startEdit(ins, "valorTotal"); }}>
                       {editingCell?.id === ins.id && editingCell.field === "valorTotal" ? (
                         <input autoFocus type="number" min="0" step="0.01"
@@ -241,32 +282,18 @@ export default function InscritosPage() {
                         <span className="cursor-pointer hover:text-primary-700 hover:underline decoration-dashed" title="Clique para editar">{formatarMoeda(ins.valorTotal)}</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-right text-green-700" onClick={(e) => { e.stopPropagation(); startEdit(ins, "valorPago"); }}>
-                      {editingCell?.id === ins.id && editingCell.field === "valorPago" ? (
-                        <input autoFocus type="number" min="0" step="0.01"
-                          className="w-24 text-right border border-green-400 rounded px-1.5 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          onBlur={() => saveEdit(ins)}
-                          onKeyDown={(e) => { if (e.key === "Enter") saveEdit(ins); if (e.key === "Escape") setEditingCell(null); }}
-                        />
-                      ) : (
-                        <span className="cursor-pointer hover:text-green-900 hover:underline decoration-dashed" title="Clique para editar">{formatarMoeda(ins.valorPago)}</span>
-                      )}
+                    {/* Pago — abre modal de histórico */}
+                    <td className="px-4 py-3 text-right text-green-700" onClick={(e) => { e.stopPropagation(); setModalPagInsId(ins.id); }}>
+                      <span className="cursor-pointer hover:text-green-900 hover:underline decoration-dashed inline-flex items-center gap-1" title="Ver histórico de pagamentos">
+                        {formatarMoeda(ins.valorPago)}
+                        <Plus size={12} className="text-green-500" />
+                      </span>
                     </td>
-                    <td className={clsx("px-4 py-3 text-right font-semibold", ins.valorAPagar > 0 ? "text-red-600" : "text-green-600")} onClick={(e) => { e.stopPropagation(); startEdit(ins, "valorAPagar"); }}>
-                      {editingCell?.id === ins.id && editingCell.field === "valorAPagar" ? (
-                        <input autoFocus type="number" min="0" step="0.01"
-                          className="w-24 text-right border border-red-400 rounded px-1.5 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          onBlur={() => saveEdit(ins)}
-                          onKeyDown={(e) => { if (e.key === "Enter") saveEdit(ins); if (e.key === "Escape") setEditingCell(null); }}
-                        />
-                      ) : (
-                        <span className="cursor-pointer hover:underline decoration-dashed" title="Clique para editar">{formatarMoeda(ins.valorAPagar)}</span>
-                      )}
+                    {/* A Pagar — somente leitura */}
+                    <td className={clsx("px-4 py-3 text-right font-semibold", ins.valorAPagar > 0 ? "text-red-600" : "text-green-600")}>
+                      {formatarMoeda(ins.valorAPagar)}
                     </td>
+                    {/* Status — inline edit */}
                     <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
                       {editingCell?.id === ins.id && editingCell.field === "status" ? (
                         <select autoFocus
@@ -356,6 +383,122 @@ export default function InscritosPage() {
           </div>
         )}
       </div>
+
+      {/* Modal de pagamentos */}
+      {modalPagIns && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+          onClick={() => setModalPagInsId(null)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b">
+              <div>
+                <h2 className="font-bold text-gray-800">Histórico de Pagamentos</h2>
+                <p className="text-sm text-gray-500">{modalPagIns.nome}</p>
+              </div>
+              <button
+                onClick={() => setModalPagInsId(null)}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Resumo financeiro */}
+            <div className="px-6 py-3 bg-gray-50 border-b flex items-center gap-5 text-sm">
+              <span className="text-gray-600">Total: <strong className="text-gray-800">{formatarMoeda(modalPagIns.valorTotal)}</strong></span>
+              <span className="text-green-700">Pago: <strong>{formatarMoeda(modalPagIns.valorPago)}</strong></span>
+              <span className={modalPagIns.valorAPagar > 0 ? "text-red-600" : "text-green-600"}>
+                A Pagar: <strong>{formatarMoeda(modalPagIns.valorAPagar)}</strong>
+              </span>
+            </div>
+
+            {/* Histórico */}
+            <div className="px-6 py-4 max-h-60 overflow-y-auto space-y-2">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Histórico</p>
+
+              {/* Saldo anterior não rastreado */}
+              {saldoAnterior > 0 && (
+                <div className="flex items-center justify-between text-sm text-gray-400 bg-gray-50 px-3 py-2 rounded-lg border border-gray-100">
+                  <span className="italic">Pagamentos anteriores (sem data)</span>
+                  <span className="font-medium">{formatarMoeda(saldoAnterior)}</span>
+                </div>
+              )}
+
+              {/* Nenhum pagamento */}
+              {(modalPagIns.historicoPagamentos || []).length === 0 && saldoAnterior === 0 && (
+                <p className="text-sm text-gray-400 text-center py-6">Nenhum pagamento registrado.</p>
+              )}
+
+              {/* Pagamentos rastreados */}
+              {(modalPagIns.historicoPagamentos || []).map((p, i) => (
+                <div key={i} className="flex items-center justify-between text-sm bg-green-50 px-3 py-2.5 rounded-lg border border-green-100">
+                  <span className="flex items-center gap-2 text-gray-600">
+                    <CalendarDays size={13} className="text-green-500 flex-shrink-0" />
+                    {p.data ? formatarData(p.data) : <span className="italic text-gray-400">sem data</span>}
+                  </span>
+                  <span className="flex items-center gap-3">
+                    <span className="font-semibold text-green-700">{formatarMoeda(p.valor)}</span>
+                    <button
+                      onClick={() => handleRemoverPagamento(modalPagIns, i, p.valor)}
+                      className="text-red-400 hover:text-red-600 p-0.5"
+                      title="Remover pagamento"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Adicionar novo pagamento */}
+            <div className="px-6 py-4 border-t bg-gray-50 space-y-3">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Registrar novo pagamento</p>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="Valor (R$)"
+                  className="input-field flex-1 text-sm"
+                  value={novoPagValor}
+                  onChange={(e) => setNovoPagValor(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleAdicionarPagamento(); }}
+                />
+                <input
+                  type="date"
+                  className="input-field text-sm"
+                  value={novoPagData}
+                  onChange={(e) => setNovoPagData(e.target.value)}
+                />
+              </div>
+              <button
+                onClick={handleAdicionarPagamento}
+                disabled={salvandoPag || !novoPagValor || parseFloat(novoPagValor) <= 0}
+                className="btn-primary w-full flex items-center justify-center gap-2 text-sm"
+              >
+                <Plus size={15} />
+                {salvandoPag ? "Registrando..." : "Registrar pagamento"}
+              </button>
+              {modalPagIns.valorAPagar > 0 && (
+                <p className="text-xs text-gray-400 text-center">
+                  Ao quitar o valor total, o status muda para{" "}
+                  <strong className="text-green-700">Confirmado</strong> automaticamente.
+                </p>
+              )}
+              {modalPagIns.status === "confirmado" && (
+                <p className="text-xs text-green-700 text-center font-medium">
+                  Pagamento quitado — status Confirmado.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
