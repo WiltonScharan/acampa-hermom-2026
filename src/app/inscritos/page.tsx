@@ -459,22 +459,26 @@ export default function InscritosPage() {
             <div className="px-6 py-4 border-t bg-gray-50 space-y-3">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Registrar novo pagamento</p>
               <div className="flex gap-2">
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="Valor (R$)"
-                  className="input-field flex-1 text-sm min-w-0"
-                  value={novoPagValor}
-                  onChange={(e) => setNovoPagValor(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") handleAdicionarPagamento(); }}
-                />
-                <input
-                  type="date"
-                  className="input-field text-sm w-36 flex-shrink-0"
-                  value={novoPagData}
-                  onChange={(e) => setNovoPagData(e.target.value)}
-                />
+                <div className="flex-1 min-w-0">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Valor (R$)"
+                    className="input-field text-sm"
+                    value={novoPagValor}
+                    onChange={(e) => setNovoPagValor(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") handleAdicionarPagamento(); }}
+                  />
+                </div>
+                <div style={{ width: "9rem", flexShrink: 0 }}>
+                  <input
+                    type="date"
+                    className="input-field text-sm"
+                    value={novoPagData}
+                    onChange={(e) => setNovoPagData(e.target.value)}
+                  />
+                </div>
               </div>
               <button
                 onClick={handleAdicionarPagamento}
