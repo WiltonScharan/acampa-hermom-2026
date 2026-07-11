@@ -19,6 +19,7 @@ import {
   Info,
   FileText,
   ListOrdered,
+  Ban,
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -35,6 +36,7 @@ const navItems = [
   { href: "/homens", label: "Homens 30-59", icon: User },
   { href: "/mulheres", label: "Mulheres 30-59", icon: User },
   { href: "/onibus", label: "Ônibus", icon: Bus },
+  { href: "/cancelados", label: "Cancelados", icon: Ban },
   { href: "/autorizacao", label: "Autorização Menores", icon: FileText },
   { href: "/informacoes", label: "Informações", icon: Info },
   { href: "/base-de-dados", label: "Base de Dados", icon: Tent },

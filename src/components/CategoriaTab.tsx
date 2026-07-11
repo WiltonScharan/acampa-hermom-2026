@@ -1,10 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useInscricoes } from "@/hooks/useInscricoes";
-import { InscricaoComCalculo, CategoriaIdade, Genero } from "@/types";
+import { InscricaoComCalculo } from "@/types";
 import { formatarMoeda, formatarData, LABEL_TIPO_QUARTO } from "@/lib/utils";
-import { Pencil, Bus } from "lucide-react";
+import { Pencil, Bus, Search } from "lucide-react";
 
 interface GrupoConfig {
   label: string;
@@ -78,6 +79,7 @@ function TabelaGrupo({ titulo, inscritos }: { titulo: string; inscritos: Inscric
 
 export default function CategoriaTab({ titulo, descricao, grupos }: Props) {
   const { inscricoes, loading } = useInscricoes();
+  const [busca, setBusca] = useState("");
 
   if (loading) {
     return (
@@ -87,7 +89,14 @@ export default function CategoriaTab({ titulo, descricao, grupos }: Props) {
     );
   }
 
-  const total = grupos.reduce((sum, g) => sum + inscricoes.filter(g.filtro).length, 0);
+  // Cancelados nunca aparecem nas abas de categoria
+  const ativos = inscricoes.filter((i) => i.status !== "cancelado");
+  const q = busca.toLowerCase();
+  const filtrados = q
+    ? ativos.filter((i) => i.nome.toLowerCase().includes(q) || i.nomeComprador.toLowerCase().includes(q))
+    : ativos;
+
+  const total = grupos.reduce((sum, g) => sum + filtrados.filter(g.filtro).length, 0);
 
   return (
     <div className="p-6 space-y-5">
@@ -101,11 +110,22 @@ export default function CategoriaTab({ titulo, descricao, grupos }: Props) {
         {descricao && <p className="text-sm text-gray-500 mt-1">{descricao}</p>}
       </div>
 
+      {/* Busca */}
+      <div className="relative max-w-sm">
+        <Search size={16} className="absolute left-3 top-2.5 text-gray-400" />
+        <input
+          className="input-field pl-9 text-sm"
+          placeholder="Buscar nome ou comprador..."
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+        />
+      </div>
+
       {grupos.map((g) => (
         <TabelaGrupo
           key={g.label}
           titulo={g.label}
-          inscritos={inscricoes.filter(g.filtro)}
+          inscritos={filtrados.filter(g.filtro)}
         />
       ))}
     </div>

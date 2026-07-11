@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useInscricoes } from "@/hooks/useInscricoes";
 import { formatarMoeda, formatarData } from "@/lib/utils";
-import { Bus, Pencil } from "lucide-react";
+import { Bus, Pencil, Search } from "lucide-react";
 
 const FILTROS = [
   { label: "Todos", value: "todos" },
@@ -21,6 +21,7 @@ const FILTROS = [
 export default function OnibusPage() {
   const { inscricoes, loading } = useInscricoes();
   const [filtro, setFiltro] = useState("todos");
+  const [busca, setBusca] = useState("");
 
   if (loading) {
     return (
@@ -30,15 +31,17 @@ export default function OnibusPage() {
     );
   }
 
-  const noOnibus = inscricoes.filter((i) => i.onibus);
+  // Cancelados não aparecem na lista de ônibus
+  const noOnibus = inscricoes.filter((i) => i.onibus && i.status !== "cancelado");
 
+  const q = busca.toLowerCase();
   const filtrados = noOnibus.filter((i) => {
+    if (q && !i.nome.toLowerCase().includes(q) && !i.nomeComprador.toLowerCase().includes(q)) return false;
     if (filtro === "todos") return true;
     if (filtro === "masculino" || filtro === "feminino") return i.genero === filtro;
     return i.categoria === filtro;
   });
 
-  // Contagens para os chips
   const contagens: Record<string, number> = {
     todos: noOnibus.length,
     masculino: noOnibus.filter((i) => i.genero === "masculino").length,
@@ -61,6 +64,17 @@ export default function OnibusPage() {
             {noOnibus.length} pessoa(s) optaram pelo transporte coletivo
           </p>
         </div>
+      </div>
+
+      {/* Busca */}
+      <div className="relative max-w-sm">
+        <Search size={16} className="absolute left-3 top-2.5 text-gray-400" />
+        <input
+          className="input-field pl-9 text-sm"
+          placeholder="Buscar nome ou comprador..."
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+        />
       </div>
 
       {/* Filtros */}

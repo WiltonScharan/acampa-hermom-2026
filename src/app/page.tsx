@@ -3,7 +3,7 @@
 import { useInscricoes } from "@/hooks/useInscricoes";
 import { formatarMoeda } from "@/lib/utils";
 import { InscricaoComCalculo } from "@/types";
-import { TrendingUp, Users, DollarSign, Bus, Home, Calendar } from "lucide-react";
+import { TrendingUp, Users, Calendar } from "lucide-react";
 
 interface CardAnalProps {
   label: string;
@@ -29,11 +29,11 @@ function Linha({ label, valor }: { label: string; valor: string | number }) {
   );
 }
 
-function CardFinanceiro({ label, valor, sub }: { label: string; valor: string; sub?: string }) {
+function CardFinanceiro({ label, valor, sub, cor }: { label: string; valor: string; sub?: string; cor?: string }) {
   return (
     <div className="card text-center">
       <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">{label}</p>
-      <p className="text-2xl font-bold text-gray-800">{valor}</p>
+      <p className={`text-2xl font-bold ${cor ?? "text-gray-800"}`}>{valor}</p>
       {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
     </div>
   );
@@ -50,42 +50,46 @@ export default function DashboardPage() {
     );
   }
 
-  const total = inscricoes.length;
-  const homens = inscricoes.filter((i) => i.genero === "masculino").length;
-  const mulheres = inscricoes.filter((i) => i.genero === "feminino").length;
+  // Cancelados ficam separados — não entram nos totais do evento
+  const ativos = inscricoes.filter((i) => i.status !== "cancelado");
+  const cancelados = inscricoes.filter((i) => i.status === "cancelado");
 
-  const village = inscricoes.filter((i) => i.tipoQuarto === "village");
+  const total = ativos.length;
+  const homens = ativos.filter((i) => i.genero === "masculino").length;
+  const mulheres = ativos.filter((i) => i.genero === "feminino").length;
+
+  const village = ativos.filter((i) => i.tipoQuarto === "village");
   const casaisVillage = new Set(village.map((i) => i.nomeComprador.toLowerCase())).size;
 
-  const melhorIdadeMasc = inscricoes.filter((i) => i.categoria === "melhor_idade_60" && i.genero === "masculino").length;
-  const melhorIdadeFem = inscricoes.filter((i) => i.categoria === "melhor_idade_60" && i.genero === "feminino").length;
+  const melhorIdadeMasc = ativos.filter((i) => i.categoria === "melhor_idade_60" && i.genero === "masculino").length;
+  const melhorIdadeFem = ativos.filter((i) => i.categoria === "melhor_idade_60" && i.genero === "feminino").length;
 
-  const criancasMasc = inscricoes.filter((i) => i.categoria === "criancas_ate_05" && i.genero === "masculino").length;
-  const criancasFem = inscricoes.filter((i) => i.categoria === "criancas_ate_05" && i.genero === "feminino").length;
+  const criancasMasc = ativos.filter((i) => i.categoria === "criancas_ate_05" && i.genero === "masculino").length;
+  const criancasFem = ativos.filter((i) => i.categoria === "criancas_ate_05" && i.genero === "feminino").length;
 
-  const adol0610Masc = inscricoes.filter((i) => i.categoria === "adolescentes_06_10" && i.genero === "masculino").length;
-  const adol0610Fem = inscricoes.filter((i) => i.categoria === "adolescentes_06_10" && i.genero === "feminino").length;
+  const adol0610Masc = ativos.filter((i) => i.categoria === "adolescentes_06_10" && i.genero === "masculino").length;
+  const adol0610Fem = ativos.filter((i) => i.categoria === "adolescentes_06_10" && i.genero === "feminino").length;
 
-  const adol1114Masc = inscricoes.filter((i) => i.categoria === "adolescentes_11_14" && i.genero === "masculino").length;
-  const adol1114Fem = inscricoes.filter((i) => i.categoria === "adolescentes_11_14" && i.genero === "feminino").length;
+  const adol1114Masc = ativos.filter((i) => i.categoria === "adolescentes_11_14" && i.genero === "masculino").length;
+  const adol1114Fem = ativos.filter((i) => i.categoria === "adolescentes_11_14" && i.genero === "feminino").length;
 
-  const jovensMasc = inscricoes.filter((i) => i.categoria === "jovens_15_29" && i.genero === "masculino").length;
-  const jovensFem = inscricoes.filter((i) => i.categoria === "jovens_15_29" && i.genero === "feminino").length;
+  const jovensMasc = ativos.filter((i) => i.categoria === "jovens_15_29" && i.genero === "masculino").length;
+  const jovensFem = ativos.filter((i) => i.categoria === "jovens_15_29" && i.genero === "feminino").length;
 
-  const adultosMasc = inscricoes.filter((i) => i.categoria === "adultos_30_59" && i.genero === "masculino").length;
-  const adultosFem = inscricoes.filter((i) => i.categoria === "adultos_30_59" && i.genero === "feminino").length;
+  const adultosMasc = ativos.filter((i) => i.categoria === "adultos_30_59" && i.genero === "masculino").length;
+  const adultosFem = ativos.filter((i) => i.categoria === "adultos_30_59" && i.genero === "feminino").length;
 
-  const onibusTotal = inscricoes.filter((i) => i.onibus).length;
-  const onibusMasc = inscricoes.filter((i) => i.onibus && i.genero === "masculino").length;
-  const onibusFem = inscricoes.filter((i) => i.onibus && i.genero === "feminino").length;
+  const onibusTotal = ativos.filter((i) => i.onibus).length;
+  const onibusMasc = ativos.filter((i) => i.onibus && i.genero === "masculino").length;
+  const onibusFem = ativos.filter((i) => i.onibus && i.genero === "feminino").length;
 
-  const confirmados = inscricoes.filter((i) => i.status === "confirmado").length;
-  const pendentes = inscricoes.filter((i) => i.status === "pendente").length;
-  const cancelados = inscricoes.filter((i) => i.status === "cancelado").length;
+  const confirmados = ativos.filter((i) => i.status === "confirmado").length;
+  const pendentes = ativos.filter((i) => i.status === "pendente").length;
 
-  const totalArrecadar = inscricoes.reduce((s, i) => s + i.valorTotal, 0);
-  const totalPago = inscricoes.reduce((s, i) => s + i.valorPago, 0);
-  const totalAPagar = inscricoes.reduce((s, i) => s + i.valorAPagar, 0);
+  const totalArrecadar = ativos.reduce((s, i) => s + i.valorTotal, 0);
+  const totalPago = ativos.reduce((s, i) => s + i.valorPago, 0);
+  const totalAPagar = ativos.reduce((s, i) => s + i.valorAPagar, 0);
+  const totalDevolvidos = cancelados.reduce((s, i) => s + i.valorPago, 0);
 
   return (
     <div className="p-6 space-y-6">
@@ -98,13 +102,22 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      {/* Financeiro */}
+      {/* Financeiro — somente inscritos ativos */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <CardFinanceiro label="Total Inscritos" valor={String(total)} sub={`${homens}H / ${mulheres}M`} />
         <CardFinanceiro label="Total a Arrecadar" valor={formatarMoeda(totalArrecadar)} />
         <CardFinanceiro label="Total Pago" valor={formatarMoeda(totalPago)} />
         <CardFinanceiro label="A Receber" valor={formatarMoeda(totalAPagar)} sub={totalAPagar > 0 ? "pendente" : "quitado"} />
       </div>
+
+      {/* Valores devolvidos (cancelados com pagamento) — linha separada */}
+      {totalDevolvidos > 0 && (
+        <div className="card border-red-200 bg-red-50 text-center py-4">
+          <p className="text-xs text-red-500 uppercase tracking-wide mb-1">Valores a Devolver (Cancelados)</p>
+          <p className="text-2xl font-bold text-red-700">{formatarMoeda(totalDevolvidos)}</p>
+          <p className="text-xs text-red-400 mt-0.5">{cancelados.filter(i => i.valorPago > 0).length} pessoa(s) com pagamento a devolver</p>
+        </div>
+      )}
 
       {/* Status */}
       <div className="grid grid-cols-3 gap-4">
@@ -118,70 +131,60 @@ export default function DashboardPage() {
         </div>
         <div className="card text-center">
           <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Cancelados</p>
-          <p className="text-2xl font-bold text-red-600">{cancelados}</p>
+          <p className="text-2xl font-bold text-red-600">{cancelados.length}</p>
         </div>
       </div>
 
-      {/* Grid analítico igual ao 2025 */}
+      {/* Grid analítico — apenas ativos */}
       <div>
         <h2 className="text-lg font-bold text-gray-700 mb-3 flex items-center gap-2">
           <TrendingUp size={18} className="text-primary-600" />
           Distribuição por Categoria
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-          {/* Total Inscritos */}
           <CardAnal label="Total Inscritos" accent>
             <Linha label="Inscritos" valor={total} />
             <Linha label="Homens" valor={homens} />
             <Linha label="Mulheres" valor={mulheres} />
           </CardAnal>
 
-          {/* Village */}
           <CardAnal label="Village">
             <Linha label="Casais" valor={`${casaisVillage} (${village.length} pess.)`} />
           </CardAnal>
 
-          {/* Melhor Idade */}
           <CardAnal label="Melhor Idade 60+">
             <Linha label="Homens" valor={melhorIdadeMasc} />
             <Linha label="Mulheres" valor={melhorIdadeFem} />
           </CardAnal>
 
-          {/* Homens 30-59 */}
           <CardAnal label="Homens 30-59">
             <Linha label="Homens" valor={adultosMasc} />
           </CardAnal>
 
-          {/* Mulheres 30-59 */}
           <CardAnal label="Mulheres 30-59">
             <Linha label="Mulheres" valor={adultosFem} />
           </CardAnal>
 
-          {/* Jovens */}
           <CardAnal label="Jovens 15-29">
             <Linha label="Homens" valor={jovensMasc} />
             <Linha label="Mulheres" valor={jovensFem} />
           </CardAnal>
 
-          {/* Adolesc. 11-14 */}
           <CardAnal label="Adolesc. 11-14">
             <Linha label="Homens" valor={adol1114Masc} />
             <Linha label="Mulheres" valor={adol1114Fem} />
           </CardAnal>
 
-          {/* Adolesc. 06-10 */}
           <CardAnal label="Adolesc. 06-10">
             <Linha label="Homens" valor={adol0610Masc} />
             <Linha label="Mulheres" valor={adol0610Fem} />
           </CardAnal>
 
-          {/* Crianças */}
           <CardAnal label="Crianças até 05">
             <Linha label="Meninos" valor={criancasMasc} />
             <Linha label="Meninas" valor={criancasFem} />
           </CardAnal>
 
-          {/* Ônibus */}
           <CardAnal label="Ônibus">
             <Linha label="Total" valor={onibusTotal} />
             <Linha label="Homens" valor={onibusMasc} />
