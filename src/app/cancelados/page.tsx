@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useInscricoes } from "@/hooks/useInscricoes";
 import { formatarMoeda, formatarData, LABEL_TIPO_QUARTO } from "@/lib/utils";
-import { Ban, Search, Pencil, AlertTriangle } from "lucide-react";
+import { Ban, Search, Pencil, Info } from "lucide-react";
 
 export default function CanceladosPage() {
   const { inscricoes, loading } = useInscricoes();
@@ -24,7 +24,7 @@ export default function CanceladosPage() {
     ? cancelados.filter((i) => i.nome.toLowerCase().includes(q) || i.nomeComprador.toLowerCase().includes(q))
     : cancelados;
 
-  const totalDevolvidos = cancelados.reduce((s, i) => s + i.valorPago, 0);
+  const totalDevolvidos = cancelados.reduce((s, i) => s + (i.valorDevolvido || 0), 0);
 
   return (
     <div className="p-6 space-y-5">
@@ -37,22 +37,14 @@ export default function CanceladosPage() {
         </div>
       </div>
 
-      {/* Card valores a devolver */}
-      {totalDevolvidos > 0 && (
-        <div className="card border-red-200 bg-red-50">
-          <div className="flex items-center gap-3">
-            <AlertTriangle size={18} className="text-red-500 flex-shrink-0" />
-            <div>
-              <p className="font-semibold text-red-800 text-sm">Valores a devolver</p>
-              <p className="text-xs text-red-600 mt-0.5">
-                {cancelados.filter((i) => i.valorPago > 0).length} pessoa(s) fizeram pagamento antes do cancelamento.
-                Esses valores <strong>não entram</strong> nos totais do acampamento.
-              </p>
-            </div>
-            <p className="text-2xl font-bold text-red-700 ml-auto">{formatarMoeda(totalDevolvidos)}</p>
-          </div>
-        </div>
-      )}
+      {/* Nota informativa simples */}
+      <div className="card bg-gray-50 border-gray-200 flex items-center gap-3 py-3">
+        <Info size={16} className="text-gray-400 flex-shrink-0" />
+        <p className="text-sm text-gray-500">
+          Cancelados <strong>não somam</strong> nos totais do acampamento (inscritos, valores a arrecadar, pago ou a receber).
+          Devoluções são registradas na aba <strong>Inscritos</strong>.
+        </p>
+      </div>
 
       {cancelados.length === 0 ? (
         <div className="card text-center py-16 text-gray-400">
@@ -84,14 +76,15 @@ export default function CanceladosPage() {
                     <th className="text-left px-4 py-3 font-semibold text-gray-600">Quarto</th>
                     <th className="text-left px-4 py-3 font-semibold text-gray-600">Nascimento</th>
                     <th className="text-right px-4 py-3 font-semibold text-gray-600">Total</th>
-                    <th className="text-right px-4 py-3 font-semibold text-red-600">Pago (devolver)</th>
+                    <th className="text-right px-4 py-3 font-semibold text-gray-600">Pago</th>
+                    <th className="text-right px-4 py-3 font-semibold text-orange-600">Devolvido</th>
                     <th className="text-center px-4 py-3 font-semibold text-gray-600">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {filtrados.length === 0 && (
                     <tr>
-                      <td colSpan={8} className="text-center py-12 text-gray-400">
+                      <td colSpan={9} className="text-center py-12 text-gray-400">
                         Nenhum resultado para a busca.
                       </td>
                     </tr>
@@ -103,9 +96,12 @@ export default function CanceladosPage() {
                       <td className="px-4 py-3 text-gray-500">{ins.labelCategoria}</td>
                       <td className="px-4 py-3 text-gray-500">{LABEL_TIPO_QUARTO[ins.tipoQuarto]}</td>
                       <td className="px-4 py-3 text-gray-500">{formatarData(ins.dataNascimento)}</td>
-                      <td className="px-4 py-3 text-right text-gray-500 line-through">{formatarMoeda(ins.valorTotal)}</td>
-                      <td className="px-4 py-3 text-right font-semibold text-red-600">
-                        {ins.valorPago > 0 ? formatarMoeda(ins.valorPago) : <span className="text-gray-400 font-normal">—</span>}
+                      <td className="px-4 py-3 text-right text-gray-400 line-through">{formatarMoeda(ins.valorTotal)}</td>
+                      <td className="px-4 py-3 text-right text-gray-500">{formatarMoeda(ins.valorPago)}</td>
+                      <td className="px-4 py-3 text-right font-semibold text-orange-600">
+                        {(ins.valorDevolvido || 0) > 0
+                          ? formatarMoeda(ins.valorDevolvido || 0)
+                          : <span className="text-gray-300 font-normal">—</span>}
                       </td>
                       <td className="px-4 py-3 text-center">
                         <Link href={`/inscritos/${ins.id}`} className="text-primary-600 hover:text-primary-800">
@@ -121,8 +117,8 @@ export default function CanceladosPage() {
               <div className="px-4 py-3 border-t border-gray-100 bg-gray-50 text-sm text-gray-500 flex justify-between">
                 <span>{filtrados.length} cancelado(s) exibido(s)</span>
                 {totalDevolvidos > 0 && (
-                  <span className="font-medium text-red-700">
-                    Total a devolver: {formatarMoeda(totalDevolvidos)}
+                  <span className="font-medium text-orange-700">
+                    Total devolvido: {formatarMoeda(totalDevolvidos)}
                   </span>
                 )}
               </div>

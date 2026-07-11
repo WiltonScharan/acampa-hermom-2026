@@ -60,10 +60,12 @@ export function enriquecerInscricao(inscricao: Inscricao): InscricaoComCalculo {
   const categoria = determinarCategoria(idadeNaData);
   const valorTotal = Number(inscricao.valorTotal) || 0;
   const valorPago = Number(inscricao.valorPago) || 0;
+  const valorDevolvido = Number(inscricao.valorDevolvido) || 0;
   return {
     ...inscricao,
     valorTotal,
     valorPago,
+    valorDevolvido,
     idadeNaData,
     categoria,
     valorAPagar: Math.max(0, valorTotal - valorPago),

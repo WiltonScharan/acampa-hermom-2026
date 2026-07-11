@@ -42,6 +42,8 @@ export interface Inscricao {
   valorTotal: number;
   valorPago: number;
   historicoPagamentos?: Pagamento[];
+  valorDevolvido?: number;
+  historicoDevolvidos?: Pagamento[];
   formaPagamento: FormaPagamento | "";
   comprovantes: string[]; // Firebase Storage URLs
   // Controle

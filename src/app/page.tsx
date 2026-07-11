@@ -89,7 +89,7 @@ export default function DashboardPage() {
   const totalArrecadar = ativos.reduce((s, i) => s + i.valorTotal, 0);
   const totalPago = ativos.reduce((s, i) => s + i.valorPago, 0);
   const totalAPagar = ativos.reduce((s, i) => s + i.valorAPagar, 0);
-  const totalDevolvidos = cancelados.reduce((s, i) => s + i.valorPago, 0);
+  const totalDevolvidos = inscricoes.reduce((s, i) => s + (i.valorDevolvido || 0), 0);
 
   return (
     <div className="p-6 space-y-6">
@@ -102,22 +102,14 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      {/* Financeiro — somente inscritos ativos */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {/* Financeiro — somente inscritos ativos + devolvidos */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <CardFinanceiro label="Total Inscritos" valor={String(total)} sub={`${homens}H / ${mulheres}M`} />
         <CardFinanceiro label="Total a Arrecadar" valor={formatarMoeda(totalArrecadar)} />
         <CardFinanceiro label="Total Pago" valor={formatarMoeda(totalPago)} />
         <CardFinanceiro label="A Receber" valor={formatarMoeda(totalAPagar)} sub={totalAPagar > 0 ? "pendente" : "quitado"} />
+        <CardFinanceiro label="Valores Devolvidos" valor={formatarMoeda(totalDevolvidos)} cor="text-orange-600" />
       </div>
-
-      {/* Valores devolvidos (cancelados com pagamento) — linha separada */}
-      {totalDevolvidos > 0 && (
-        <div className="card border-red-200 bg-red-50 text-center py-4">
-          <p className="text-xs text-red-500 uppercase tracking-wide mb-1">Valores a Devolver (Cancelados)</p>
-          <p className="text-2xl font-bold text-red-700">{formatarMoeda(totalDevolvidos)}</p>
-          <p className="text-xs text-red-400 mt-0.5">{cancelados.filter(i => i.valorPago > 0).length} pessoa(s) com pagamento a devolver</p>
-        </div>
-      )}
 
       {/* Status */}
       <div className="grid grid-cols-3 gap-4">
