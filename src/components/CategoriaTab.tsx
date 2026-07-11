@@ -80,6 +80,7 @@ function TabelaGrupo({ titulo, inscritos }: { titulo: string; inscritos: Inscric
 export default function CategoriaTab({ titulo, descricao, grupos }: Props) {
   const { inscricoes, loading } = useInscricoes();
   const [busca, setBusca] = useState("");
+  const [filtroQuarto, setFiltroQuarto] = useState("");
 
   if (loading) {
     return (
@@ -92,9 +93,11 @@ export default function CategoriaTab({ titulo, descricao, grupos }: Props) {
   // Cancelados nunca aparecem nas abas de categoria
   const ativos = inscricoes.filter((i) => i.status !== "cancelado");
   const q = busca.toLowerCase();
-  const filtrados = q
-    ? ativos.filter((i) => i.nome.toLowerCase().includes(q) || i.nomeComprador.toLowerCase().includes(q))
-    : ativos;
+  const filtrados = ativos.filter((i) => {
+    if (q && !i.nome.toLowerCase().includes(q) && !i.nomeComprador.toLowerCase().includes(q)) return false;
+    if (filtroQuarto && i.tipoQuarto !== filtroQuarto) return false;
+    return true;
+  });
 
   const total = grupos.reduce((sum, g) => sum + filtrados.filter(g.filtro).length, 0);
 
@@ -110,15 +113,27 @@ export default function CategoriaTab({ titulo, descricao, grupos }: Props) {
         {descricao && <p className="text-sm text-gray-500 mt-1">{descricao}</p>}
       </div>
 
-      {/* Busca */}
-      <div className="relative max-w-sm">
-        <Search size={16} className="absolute left-3 top-2.5 text-gray-400" />
-        <input
-          className="input-field pl-9 text-sm"
-          placeholder="Buscar nome ou comprador..."
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-        />
+      {/* Busca + Filtro de quarto */}
+      <div className="flex gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-[180px] max-w-sm">
+          <Search size={16} className="absolute left-3 top-2.5 text-gray-400" />
+          <input
+            className="input-field pl-9 text-sm"
+            placeholder="Buscar nome ou comprador..."
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+          />
+        </div>
+        <select
+          className="input-field text-sm"
+          style={{ width: "13rem", flexShrink: 0 }}
+          value={filtroQuarto}
+          onChange={(e) => setFiltroQuarto(e.target.value)}
+        >
+          <option value="">Todos os quartos</option>
+          <option value="coletivo">Quarto Coletivo</option>
+          <option value="village">Village</option>
+        </select>
       </div>
 
       {grupos.map((g) => (
