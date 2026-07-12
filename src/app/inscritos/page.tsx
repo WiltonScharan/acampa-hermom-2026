@@ -40,6 +40,7 @@ export default function InscritosPage() {
 
   const filtrados = inscricoes
     .filter((i) => {
+      if (i.status === "cancelado") return false;
       const q = busca.toLowerCase();
       if (q && !i.nome.toLowerCase().includes(q) && !i.nomeComprador.toLowerCase().includes(q))
         return false;
@@ -195,7 +196,7 @@ export default function InscritosPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Inscritos</h1>
-          <p className="text-sm text-gray-500">{inscricoes.length} inscrição(ões) no total</p>
+          <p className="text-sm text-gray-500">{inscricoes.filter(i => i.status !== "cancelado").length} inscrição(ões) no total</p>
         </div>
         <Link href="/inscritos/novo" className="btn-primary flex items-center gap-2">
           <Plus size={16} />
@@ -219,7 +220,6 @@ export default function InscritosPage() {
             <option value="">Todos os status</option>
             <option value="pendente">Pendente</option>
             <option value="confirmado">Confirmado</option>
-            <option value="cancelado">Cancelado</option>
           </select>
           <select className="input-field" value={filtroQuarto} onChange={(e) => setFiltroQuarto(e.target.value)}>
             <option value="">Todos os quartos</option>
