@@ -403,10 +403,12 @@ export default function InscritosPage() {
           </table>
         </div>
         {filtrados.length > 0 && (
-          <div className="px-4 py-3 border-t border-gray-100 bg-gray-50 text-sm text-gray-500 flex justify-between">
-            <span>{filtrados.length} inscrito(s) exibido(s)</span>
-            <span className="font-medium text-gray-700">
-              Total a receber: {formatarMoeda(filtrados.reduce((s, i) => s + i.valorAPagar, 0))}
+          <div className="px-4 py-3 border-t border-gray-100 bg-gray-50 text-sm flex flex-wrap gap-x-6 gap-y-1 justify-between items-center">
+            <span className="text-gray-500">{filtrados.length} inscrito(s) exibido(s)</span>
+            <span className="flex flex-wrap gap-x-5 gap-y-1 font-medium">
+              <span className="text-gray-700">Total: {formatarMoeda(filtrados.reduce((s, i) => s + i.valorTotal, 0))}</span>
+              <span className="text-green-700">Pago: {formatarMoeda(filtrados.reduce((s, i) => s + i.valorPago, 0))}</span>
+              <span className="text-red-600">A receber: {formatarMoeda(filtrados.reduce((s, i) => s + i.valorAPagar, 0))}</span>
             </span>
           </div>
         )}
