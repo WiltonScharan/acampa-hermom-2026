@@ -20,6 +20,7 @@ import {
   FileText,
   ListOrdered,
   Ban,
+  NotebookPen,
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -39,6 +40,7 @@ const navItems = [
   { href: "/cancelados", label: "Cancelados", icon: Ban },
   { href: "/autorizacao", label: "Autorização Menores", icon: FileText },
   { href: "/informacoes", label: "Informações", icon: Info },
+  { href: "/anotacoes", label: "Anotações", icon: NotebookPen },
   { href: "/base-de-dados", label: "Base de Dados", icon: Tent },
 ];
 

@@ -105,6 +105,46 @@ export async function excluirListaEspera(id: string): Promise<void> {
   await deleteDoc(doc(db, LISTA_ESPERA, id));
 }
 
+// ─── Anotações ─────────────────────────────────────────────────────────────
+
+const ANOTACOES = "anotacoes";
+
+export interface Anotacao {
+  id: string;
+  titulo: string;
+  conteudo: string;
+  cor: string;
+  criadoEm: import("firebase/firestore").Timestamp | null;
+  atualizadoEm: import("firebase/firestore").Timestamp | null;
+}
+
+export function ouvirAnotacoes(callback: (items: Anotacao[]) => void) {
+  const q = query(collection(db, ANOTACOES), orderBy("criadoEm", "desc"));
+  return onSnapshot(q, (snapshot) => {
+    const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Anotacao));
+    callback(data);
+  });
+}
+
+export async function criarAnotacao(): Promise<string> {
+  const ref = await addDoc(collection(db, ANOTACOES), {
+    titulo: "",
+    conteudo: "",
+    cor: "yellow",
+    criadoEm: serverTimestamp(),
+    atualizadoEm: serverTimestamp(),
+  });
+  return ref.id;
+}
+
+export async function atualizarAnotacao(id: string, dados: Partial<Pick<Anotacao, "titulo" | "conteudo" | "cor">>): Promise<void> {
+  await updateDoc(doc(db, ANOTACOES, id), { ...dados, atualizadoEm: serverTimestamp() });
+}
+
+export async function excluirAnotacao(id: string): Promise<void> {
+  await deleteDoc(doc(db, ANOTACOES, id));
+}
+
 export async function atualizarComprovantes(
   id: string,
   comprovantes: string[]
