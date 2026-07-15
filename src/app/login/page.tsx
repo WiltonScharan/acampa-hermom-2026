@@ -3,7 +3,53 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Eye, EyeOff, Lock, ArrowRight } from "lucide-react";
+import { Eye, EyeOff, Lock } from "lucide-react";
+
+function Bubble({
+  text,
+  top,
+  left,
+  right,
+  bottom,
+  rotate = 0,
+  tail = "bottom",
+}: {
+  text: string;
+  top?: string; left?: string; right?: string; bottom?: string;
+  rotate?: number;
+  tail?: "bottom" | "top" | "left" | "right";
+}) {
+  const tailClass = {
+    bottom: "absolute -bottom-2.5 left-1/2 -translate-x-1/2 border-l-[10px] border-r-[10px] border-t-[12px] border-l-transparent border-r-transparent border-t-[#f0dfc4]",
+    top:    "absolute -top-2.5 left-1/2 -translate-x-1/2 border-l-[10px] border-r-[10px] border-b-[12px] border-l-transparent border-r-transparent border-b-[#f0dfc4]",
+    left:   "absolute top-1/2 -left-2.5 -translate-y-1/2 border-t-[10px] border-b-[10px] border-r-[12px] border-t-transparent border-b-transparent border-r-[#f0dfc4]",
+    right:  "absolute top-1/2 -right-2.5 -translate-y-1/2 border-t-[10px] border-b-[10px] border-l-[12px] border-t-transparent border-b-transparent border-l-[#f0dfc4]",
+  }[tail];
+
+  return (
+    <div
+      className="absolute select-none"
+      style={{ top, left, right, bottom, transform: `rotate(${rotate}deg)`, zIndex: 10 }}
+    >
+      <div className="relative px-5 py-2.5 rounded-full text-sm font-semibold shadow-lg"
+        style={{ background: "#f0dfc4", color: "#2a1204", boxShadow: "0 4px 16px rgba(0,0,0,0.3)" }}>
+        {text}
+        <div className={tailClass} />
+      </div>
+    </div>
+  );
+}
+
+function CrossIcon({ style }: { style: React.CSSProperties }) {
+  return (
+    <div className="absolute select-none" style={{ ...style, zIndex: 10 }}>
+      <div className="w-14 h-14 rounded-xl flex items-center justify-center text-2xl"
+        style={{ background: "#1a0c07", border: "2px solid #7c2d12", color: "#ea580c", boxShadow: "0 4px 16px rgba(0,0,0,0.4)" }}>
+        ✝
+      </div>
+    </div>
+  );
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -30,7 +76,7 @@ export default function LoginPage() {
         setErro(true);
         setShake(true);
         setValor("");
-        setTimeout(() => { setShake(false); setErro(false); }, 800);
+        setTimeout(() => { setShake(false); setErro(false); }, 700);
       }
     } finally {
       setCarregando(false);
@@ -40,108 +86,117 @@ export default function LoginPage() {
   return (
     <div
       className="min-h-screen flex items-center justify-center relative overflow-hidden"
-      style={{ background: "linear-gradient(135deg, #431407 0%, #7c2d12 30%, #9a3412 60%, #c2410c 100%)" }}
+      style={{ background: "#140a05" }}
     >
-      {/* Blobs */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-40 -left-40 w-[500px] h-[500px] rounded-full opacity-20"
-          style={{ background: "radial-gradient(circle, #fb923c, transparent)" }} />
-        <div className="absolute -bottom-40 -right-20 w-[600px] h-[600px] rounded-full opacity-15"
-          style={{ background: "radial-gradient(circle, #f97316, transparent)" }} />
-        <div className="absolute top-1/3 right-1/4 w-64 h-64 rounded-full opacity-10"
-          style={{ background: "radial-gradient(circle, #fbbf24, transparent)" }} />
-        <svg className="absolute inset-0 w-full h-full">
-          <defs>
-            <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
-              <path d="M 60 0 L 0 0 0 60" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#grid)" />
-        </svg>
+      {/* Bolhas decorativas */}
+      <Bubble text="Cuidar"  top="8%"  left="6%"   rotate={-6} tail="bottom" />
+      <Bubble text="Amar"   top="12%" left="44%"  rotate={2}  tail="bottom" />
+      <Bubble text="Servir" top="72%" left="5%"   rotate={-3} tail="top" />
+      <Bubble text="Amar"   bottom="6%" right="4%"  rotate={4}  tail="top" />
+      <Bubble text="Orar"   top="55%" right="5%"  rotate={-5} tail="left" />
+      <CrossIcon style={{ top: "6%", right: "6%" }} />
+
+      {/* Glow de fundo */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-10"
+          style={{ background: "radial-gradient(circle, #ea580c 0%, transparent 70%)" }} />
       </div>
 
       {/* Card */}
       <div
-        className={`relative z-10 w-full max-w-sm mx-4 ${shake ? "animate-shake" : ""}`}
-        style={{ filter: "drop-shadow(0 25px 60px rgba(0,0,0,0.5))" }}
+        className={`relative z-20 w-full max-w-md mx-4 rounded-2xl overflow-hidden ${shake ? "animate-shake" : ""}`}
+        style={{
+          background: "#1c1008",
+          border: "1.5px solid #c2410c",
+          boxShadow: "0 0 0 1px rgba(234,88,12,0.15), 0 32px 64px rgba(0,0,0,0.7), 0 0 80px rgba(234,88,12,0.08)",
+        }}
       >
-        <div
-          className="relative rounded-3xl overflow-hidden"
-          style={{
-            background: "rgba(255,255,255,0.07)",
-            backdropFilter: "blur(24px)",
-            border: "1px solid rgba(255,255,255,0.12)",
-          }}
-        >
-          {/* Faixa colorida */}
-          <div className="h-1 w-full" style={{ background: "linear-gradient(90deg, #f97316, #fb923c, #fbbf24, #fb923c, #ea580c)" }} />
+        {/* Linha de borda superior laranja */}
+        <div className="h-[3px] w-full" style={{ background: "linear-gradient(90deg, transparent, #f97316, #ea580c, #f97316, transparent)" }} />
 
-          <div className="px-10 pt-10 pb-10">
-            {/* Logo */}
-            <div className="flex flex-col items-center mb-10">
-              <div
-                className="relative mb-5 w-24 h-24 rounded-2xl overflow-hidden"
-                style={{ boxShadow: "0 0 0 3px rgba(251,146,60,0.4), 0 0 0 6px rgba(251,146,60,0.1)", filter: "drop-shadow(0 8px 24px rgba(0,0,0,0.4))" }}
-              >
-                <Image src="/hermom.png" alt="Igreja Hermom" fill className="object-cover" />
-                <div className="absolute inset-0 rounded-2xl" style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 60%)" }} />
-              </div>
-              <h1 className="text-white font-bold text-2xl tracking-tight leading-none">Acampa Hermom</h1>
-              <div className="flex items-center gap-2 mt-2">
-                <div className="h-px w-8" style={{ background: "rgba(251,146,60,0.5)" }} />
-                <p className="text-orange-300 text-xs font-medium tracking-widest uppercase">2026</p>
-                <div className="h-px w-8" style={{ background: "rgba(251,146,60,0.5)" }} />
-              </div>
-              <p className="text-white/40 text-xs mt-1.5">Gestão de Inscrições</p>
+        <div className="px-10 py-10 flex flex-col items-center">
+          {/* Logo */}
+          <div className="relative mb-5">
+            <div
+              className="w-24 h-24 rounded-full overflow-hidden flex items-center justify-center"
+              style={{
+                background: "#ea580c",
+                boxShadow: "0 0 0 4px rgba(234,88,12,0.3), 0 0 32px rgba(234,88,12,0.4)",
+              }}
+            >
+              <Image src="/hermom.png" alt="Igreja Hermom" width={96} height={96} className="object-cover w-full h-full" />
+            </div>
+          </div>
+
+          {/* Nome */}
+          <h1 className="text-white font-bold text-3xl tracking-tight mb-1">Igreja Hermom</h1>
+          <p className="text-lg mb-4" style={{ color: "#f97316", fontStyle: "italic", fontFamily: "Georgia, serif" }}>
+            Amar · Servir · Cuidar
+          </p>
+
+          {/* Divisor */}
+          <div className="w-full h-px mb-4" style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent)" }} />
+
+          {/* Label sistema */}
+          <p className="text-xs font-semibold tracking-[0.2em] uppercase mb-1" style={{ color: "rgba(255,255,255,0.4)" }}>
+            Acampa Hermom 2026
+          </p>
+          <p className="text-sm mb-8" style={{ color: "rgba(255,255,255,0.5)" }}>
+            Faça login para acessar o sistema.
+          </p>
+
+          {/* Formulário */}
+          <form onSubmit={handleSubmit} className="w-full space-y-3">
+            <div className="relative">
+              <Lock size={15} className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: "rgba(255,255,255,0.3)" }} />
+              <input
+                type={mostrar ? "text" : "password"}
+                value={valor}
+                onChange={(e) => { setValor(e.target.value); setErro(false); }}
+                placeholder="Digite o PIN de acesso"
+                autoFocus
+                autoComplete="off"
+                className="w-full rounded-xl pl-11 pr-12 py-4 text-white text-base tracking-widest placeholder-white/20 focus:outline-none transition-all"
+                style={{
+                  background: "rgba(255,255,255,0.06)",
+                  border: erro ? "1px solid rgba(248,113,113,0.6)" : "1px solid rgba(255,255,255,0.1)",
+                  boxShadow: erro ? "0 0 0 3px rgba(248,113,113,0.1)" : "none",
+                }}
+              />
+              <button type="button" tabIndex={-1} onClick={() => setMostrar(!mostrar)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 transition-colors"
+                style={{ color: "rgba(255,255,255,0.3)" }}>
+                {mostrar ? <EyeOff size={17} /> : <Eye size={17} />}
+              </button>
             </div>
 
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="flex items-center gap-1.5 text-orange-200/80 text-xs font-semibold uppercase tracking-widest mb-2.5">
-                  <Lock size={11} /> PIN de acesso
-                </label>
-                <div className="relative">
-                  <input
-                    type={mostrar ? "text" : "password"}
-                    value={valor}
-                    onChange={(e) => { setValor(e.target.value); setErro(false); }}
-                    placeholder="••••••••••"
-                    autoFocus
-                    autoComplete="off"
-                    className="w-full rounded-xl px-4 py-3.5 pr-12 text-white text-lg tracking-widest placeholder-white/20 focus:outline-none transition-all"
-                    style={{
-                      background: "rgba(255,255,255,0.08)",
-                      border: erro ? "1px solid rgba(248,113,113,0.7)" : "1px solid rgba(255,255,255,0.15)",
-                      boxShadow: erro ? "0 0 0 3px rgba(248,113,113,0.15)" : "inset 0 1px 0 rgba(255,255,255,0.05)",
-                    }}
-                  />
-                  <button type="button" tabIndex={-1} onClick={() => setMostrar(!mostrar)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/70 transition-colors p-0.5">
-                    {mostrar ? <EyeOff size={17} /> : <Eye size={17} />}
-                  </button>
-                </div>
-                {erro && (
-                  <p className="flex items-center gap-1 text-red-300 text-xs mt-2">
-                    <span className="text-red-400">✕</span> PIN incorreto. Tente novamente.
-                  </p>
-                )}
-              </div>
+            {erro && (
+              <p className="text-red-400 text-xs text-center">PIN incorreto. Tente novamente.</p>
+            )}
 
-              <button
-                type="submit"
-                disabled={carregando || !valor}
-                className="w-full flex items-center justify-center gap-2 rounded-xl py-3.5 font-bold text-base text-white transition-all duration-200 disabled:opacity-40"
-                style={{ background: "linear-gradient(135deg, #ea580c, #f97316)", boxShadow: "0 4px 20px rgba(234,88,12,0.4)" }}
-              >
-                {carregando
-                  ? <><div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Entrando...</>
-                  : <>Entrar <ArrowRight size={16} /></>}
-              </button>
-            </form>
+            <button
+              type="submit"
+              disabled={carregando || !valor}
+              className="w-full flex items-center justify-center gap-2.5 rounded-xl py-4 font-bold text-base transition-all duration-200"
+              style={{
+                background: carregando ? "rgba(30,58,95,0.7)" : "#1e3a5f",
+                color: "white",
+                border: "1px solid rgba(255,255,255,0.1)",
+                boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
+                opacity: !valor ? 0.5 : 1,
+              }}
+            >
+              {carregando ? (
+                <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Entrando...</>
+              ) : (
+                <><span>🔒</span> Entrar no Sistema</>
+              )}
+            </button>
+          </form>
 
-            <p className="text-center text-white/20 text-xs mt-8">Igreja Hermom · 19–22 Nov 2026</p>
-          </div>
+          <p className="text-xs mt-8" style={{ color: "rgba(255,255,255,0.2)" }}>
+            Use o PIN definido pelo administrador.
+          </p>
         </div>
       </div>
     </div>
