@@ -5,20 +5,38 @@ import { usePathname } from "next/navigation";
 import Sidebar from "./Sidebar";
 import LoginPage, { STORAGE_KEY } from "./LoginPage";
 
+function lerAuth(): boolean {
+  try {
+    return sessionStorage.getItem(STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isPublic = pathname.startsWith("/autorizacao/assinar/");
-  const [autenticado, setAutenticado] = useState<boolean | null>(null);
+
+  // mounted evita renderizar conteúdo no SSR antes de checar sessionStorage
+  const [mounted, setMounted] = useState(false);
+  const [autenticado, setAutenticado] = useState(false);
 
   useEffect(() => {
-    const ok = sessionStorage.getItem(STORAGE_KEY) === "1";
-    setAutenticado(ok);
+    setAutenticado(lerAuth());
+    setMounted(true);
   }, []);
 
+  // Página pública (assinatura de autorização) — sem proteção
   if (isPublic) return <>{children}</>;
 
-  // Aguarda hidratação para evitar flash
-  if (autenticado === null) return null;
+  // Aguarda montar no client para não mostrar flash do conteúdo protegido
+  if (!mounted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "linear-gradient(135deg, #431407 0%, #7c2d12 30%, #9a3412 60%, #c2410c 100%)" }}>
+        <div className="w-8 h-8 border-2 border-orange-300/40 border-t-orange-300 rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   if (!autenticado) {
     return <LoginPage onSuccess={() => setAutenticado(true)} />;
