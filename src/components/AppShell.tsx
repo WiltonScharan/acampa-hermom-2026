@@ -1,12 +1,21 @@
 "use client";
 
+import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Sidebar from "./Sidebar";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
-  // Páginas sem sidebar
+  useEffect(() => {
+    // Se não há flag de sessão desta aba, força logout e redireciona para login
+    if (!sessionStorage.getItem("acampa_tab")) {
+      fetch("/api/logout", { method: "POST" }).finally(() => {
+        window.location.href = "/";
+      });
+    }
+  }, []);
+
   const semSidebar =
     pathname === "/login" ||
     pathname.startsWith("/autorizacao/assinar/");

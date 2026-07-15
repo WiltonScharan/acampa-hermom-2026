@@ -19,6 +19,7 @@ export default function LoginForm() {
         body: JSON.stringify({ pin }),
       });
       if (res.ok) {
+        sessionStorage.setItem("acampa_tab", "1");
         window.location.href = "/";
       } else {
         setErro(true);
