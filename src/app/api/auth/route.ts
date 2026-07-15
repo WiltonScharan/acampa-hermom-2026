@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
-      maxAge: 60 * 60 * 8,
+      // sem maxAge = cookie de sessao (some ao fechar o browser)
     });
     res.headers.set("Cache-Control", "no-store");
     return res;

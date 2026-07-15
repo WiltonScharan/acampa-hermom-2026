@@ -21,6 +21,7 @@ import {
   ListOrdered,
   Ban,
   NotebookPen,
+  LogOut,
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -101,6 +102,22 @@ export default function Sidebar() {
           );
         })}
       </nav>
+
+      {/* Botão sair */}
+      <button
+        onClick={async () => {
+          await fetch("/api/logout", { method: "POST" });
+          window.location.href = "/";
+        }}
+        className={clsx(
+          "flex items-center gap-3 mx-2 mb-1 px-3 py-2.5 rounded-lg text-sm font-medium text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors",
+          collapsed ? "justify-center" : ""
+        )}
+        title={collapsed ? "Sair" : undefined}
+      >
+        <LogOut size={18} className="flex-shrink-0" />
+        {!collapsed && <span>Sair</span>}
+      </button>
 
       {/* Collapse button */}
       <button
