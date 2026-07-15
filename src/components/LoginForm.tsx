@@ -1,214 +1,200 @@
 "use client";
-
 import { useState } from "react";
-import Image from "next/image";
-import { Eye, EyeOff, Lock } from "lucide-react";
-
-function Bubble({ text, style }: { text: string; style: React.CSSProperties }) {
-  return (
-    <div className="absolute select-none" style={{ ...style, zIndex: 5 }}>
-      <div
-        className="relative px-5 py-2.5 rounded-full text-sm font-semibold shadow-lg"
-        style={{ background: "#f0dfc4", color: "#2a1204" }}
-      >
-        {text}
-        <div
-          className="absolute -bottom-2.5 left-1/2 -translate-x-1/2"
-          style={{
-            width: 0, height: 0,
-            borderLeft: "10px solid transparent",
-            borderRight: "10px solid transparent",
-            borderTop: "12px solid #f0dfc4",
-          }}
-        />
-      </div>
-    </div>
-  );
-}
 
 export default function LoginForm() {
-  const [valor, setValor] = useState("");
+  const [pin, setPin] = useState("");
   const [mostrar, setMostrar] = useState(false);
   const [erro, setErro] = useState(false);
   const [shake, setShake] = useState(false);
-  const [carregando, setCarregando] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!valor) return;
-    setCarregando(true);
+    if (!pin || loading) return;
+    setLoading(true);
     try {
       const res = await fetch("/api/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pin: valor }),
+        body: JSON.stringify({ pin }),
       });
       if (res.ok) {
         window.location.href = "/";
       } else {
         setErro(true);
         setShake(true);
-        setValor("");
+        setPin("");
         setTimeout(() => { setShake(false); setErro(false); }, 700);
+        setLoading(false);
       }
     } catch {
-      setCarregando(false);
+      setLoading(false);
     }
   }
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center relative overflow-hidden"
-      style={{ background: "#140a05" }}
-    >
-      {/* Bolhas decorativas */}
-      <Bubble text="Cuidar" style={{ top: "8%",  left: "6%",  transform: "rotate(-6deg)" }} />
-      <Bubble text="Amar"   style={{ top: "10%", left: "44%", transform: "rotate(2deg)"  }} />
-      <Bubble text="Amar"   style={{ bottom: "6%", right: "3%", transform: "rotate(4deg)" }} />
-
-      {/* Cruz decorativa */}
-      <div
-        className="absolute select-none"
-        style={{ top: "6%", right: "6%", zIndex: 5 }}
-      >
-        <div
-          className="w-14 h-14 rounded-xl flex items-center justify-center text-2xl"
-          style={{
-            background: "#1a0c07",
-            border: "2px solid #7c2d12",
-            color: "#ea580c",
-            boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
-          }}
-        >
-          ✝
-        </div>
-      </div>
-
-      {/* Glow central */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background: "radial-gradient(ellipse at center, rgba(234,88,12,0.06) 0%, transparent 70%)",
-        }}
-      />
-
-      {/* Card */}
-      <div
-        className={`relative z-10 w-full max-w-md mx-4 rounded-2xl overflow-hidden ${shake ? "animate-shake" : ""}`}
-        style={{
-          background: "#1c1008",
-          border: "1.5px solid #c2410c",
-          boxShadow: "0 0 0 1px rgba(234,88,12,0.1), 0 32px 64px rgba(0,0,0,0.7)",
-        }}
-      >
-        {/* Linha topo */}
-        <div
-          className="h-[3px] w-full"
-          style={{ background: "linear-gradient(90deg, transparent, #f97316, #ea580c, #f97316, transparent)" }}
-        />
-
-        <div className="px-10 py-10 flex flex-col items-center">
-          {/* Logo */}
-          <div
-            className="w-24 h-24 rounded-full overflow-hidden mb-5 flex-shrink-0"
-            style={{
-              background: "#ea580c",
-              boxShadow: "0 0 0 4px rgba(234,88,12,0.3), 0 0 32px rgba(234,88,12,0.35)",
-            }}
-          >
-            <Image src="/hermom.png" alt="Igreja Hermom" width={96} height={96} className="object-cover w-full h-full" />
+    <div style={{
+      minHeight: "100vh",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      background: "linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%)",
+      fontFamily: "system-ui, -apple-system, sans-serif",
+      padding: "16px",
+    }}>
+      <div style={{
+        background: "white",
+        borderRadius: "20px",
+        padding: "48px 40px",
+        width: "100%",
+        maxWidth: "420px",
+        boxShadow: "0 30px 60px rgba(0,0,0,0.4)",
+        animation: shake ? "shake 0.5s ease-in-out" : "none",
+      }}>
+        {/* Ícone e título */}
+        <div style={{ textAlign: "center", marginBottom: "36px" }}>
+          <div style={{
+            width: "72px",
+            height: "72px",
+            background: "linear-gradient(135deg, #ea580c, #f97316)",
+            borderRadius: "20px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: "36px",
+            margin: "0 auto 20px",
+            boxShadow: "0 8px 24px rgba(234,88,12,0.35)",
+          }}>
+            ⛺
           </div>
-
-          {/* Nome */}
-          <h1 className="text-white font-bold text-3xl tracking-tight mb-1">Igreja Hermom</h1>
-
-          {/* Slogan */}
-          <p
-            className="text-lg mb-4"
-            style={{ color: "#f97316", fontStyle: "italic", fontFamily: "Georgia, serif" }}
-          >
-            Amar · Servir · Cuidar
-          </p>
-
-          {/* Divisor */}
-          <div
-            className="w-full h-px mb-4"
-            style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent)" }}
-          />
-
-          {/* Label */}
-          <p className="text-xs font-semibold tracking-[0.2em] uppercase mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>
+          <h1 style={{
+            fontSize: "22px",
+            fontWeight: "800",
+            color: "#0f172a",
+            margin: "0 0 6px",
+            letterSpacing: "-0.5px",
+          }}>
             Acampa Hermom 2026
+          </h1>
+          <p style={{ color: "#64748b", fontSize: "14px", margin: 0 }}>
+            Acesse o sistema de gestão
           </p>
-          <p className="text-sm mb-8" style={{ color: "rgba(255,255,255,0.45)" }}>
-            Faça login para acessar o sistema.
-          </p>
+        </div>
 
-          {/* Formulário */}
-          <form onSubmit={handleSubmit} className="w-full space-y-3">
-            <div className="relative">
-              <Lock
-                size={15}
-                className="absolute left-4 top-1/2 -translate-y-1/2"
-                style={{ color: "rgba(255,255,255,0.3)" }}
-              />
-              <input
-                type={mostrar ? "text" : "password"}
-                value={valor}
-                onChange={(e) => { setValor(e.target.value); setErro(false); }}
-                placeholder="Digite o PIN de acesso"
-                autoFocus
-                autoComplete="off"
-                className="w-full rounded-xl pl-11 pr-12 py-4 text-white text-base placeholder-white/20 focus:outline-none"
-                style={{
-                  background: "rgba(255,255,255,0.06)",
-                  border: erro ? "1px solid rgba(248,113,113,0.6)" : "1px solid rgba(255,255,255,0.1)",
-                  outline: "none",
-                  letterSpacing: mostrar ? "normal" : "0.15em",
-                }}
-              />
-              <button
-                type="button"
-                tabIndex={-1}
-                onClick={() => setMostrar(!mostrar)}
-                className="absolute right-4 top-1/2 -translate-y-1/2"
-                style={{ color: "rgba(255,255,255,0.3)" }}
-              >
-                {mostrar ? <EyeOff size={17} /> : <Eye size={17} />}
-              </button>
-            </div>
+        {/* Formulário */}
+        <form onSubmit={handleSubmit}>
+          <label style={{
+            display: "block",
+            fontSize: "13px",
+            fontWeight: "600",
+            color: "#374151",
+            marginBottom: "8px",
+          }}>
+            PIN de acesso
+          </label>
 
-            {erro && (
-              <p className="text-red-400 text-xs text-center">PIN incorreto. Tente novamente.</p>
-            )}
-
-            <button
-              type="submit"
-              disabled={carregando || !valor}
-              className="w-full flex items-center justify-center gap-2.5 rounded-xl py-4 font-bold text-base text-white transition-all"
+          <div style={{ position: "relative", marginBottom: "12px" }}>
+            <input
+              type={mostrar ? "text" : "password"}
+              value={pin}
+              onChange={e => { setPin(e.target.value); setErro(false); }}
+              placeholder="••••••••"
+              autoFocus
+              autoComplete="off"
               style={{
-                background: "#1e3a5f",
-                border: "1px solid rgba(255,255,255,0.1)",
-                boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
-                opacity: !valor ? 0.5 : 1,
+                width: "100%",
+                padding: "14px 48px 14px 16px",
+                fontSize: "18px",
+                border: `2px solid ${erro ? "#ef4444" : "#e2e8f0"}`,
+                borderRadius: "12px",
+                outline: "none",
+                boxSizing: "border-box",
+                letterSpacing: mostrar ? "normal" : "0.3em",
+                color: "#0f172a",
+                background: erro ? "#fef2f2" : "#f8fafc",
+                transition: "border-color 0.2s",
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => setMostrar(!mostrar)}
+              style={{
+                position: "absolute",
+                right: "14px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: "#94a3b8",
+                fontSize: "20px",
+                padding: "4px",
+                lineHeight: 1,
               }}
             >
-              {carregando ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Entrando...
-                </>
-              ) : (
-                <><span>🔒</span> Entrar como Administrador</>
-              )}
+              {mostrar ? "🙈" : "👁️"}
             </button>
-          </form>
+          </div>
 
-          <p className="text-xs mt-8" style={{ color: "rgba(255,255,255,0.2)" }}>
-            Use as credenciais definidas pelo administrador.
-          </p>
-        </div>
+          {erro && (
+            <p style={{
+              color: "#ef4444",
+              fontSize: "13px",
+              margin: "0 0 14px",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+            }}>
+              ✕ PIN incorreto. Tente novamente.
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading || !pin}
+            style={{
+              width: "100%",
+              padding: "15px",
+              background: !pin || loading
+                ? "#cbd5e1"
+                : "linear-gradient(135deg, #1e3a5f, #2563eb)",
+              color: "white",
+              border: "none",
+              borderRadius: "12px",
+              fontSize: "16px",
+              fontWeight: "700",
+              cursor: !pin || loading ? "not-allowed" : "pointer",
+              marginTop: erro ? "0" : "4px",
+              transition: "all 0.2s",
+              letterSpacing: "0.3px",
+            }}
+          >
+            {loading ? "Verificando..." : "Entrar no Sistema"}
+          </button>
+        </form>
+
+        <p style={{
+          textAlign: "center",
+          color: "#94a3b8",
+          fontSize: "12px",
+          marginTop: "28px",
+          marginBottom: 0,
+        }}>
+          Igreja Hermom · Sistema Restrito
+        </p>
       </div>
+
+      <style>{`
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          15%       { transform: translateX(-8px); }
+          30%       { transform: translateX(8px); }
+          45%       { transform: translateX(-6px); }
+          60%       { transform: translateX(6px); }
+          75%       { transform: translateX(-3px); }
+          90%       { transform: translateX(3px); }
+        }
+      `}</style>
     </div>
   );
 }
