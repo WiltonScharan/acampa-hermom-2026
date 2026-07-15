@@ -1,24 +1,30 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import Sidebar from "./Sidebar";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const semSidebar = pathname === "/login" || pathname.startsWith("/autorizacao/assinar/");
+
+  // Começa como false para páginas protegidas — não renderiza nada até confirmar sessão
+  const [liberado, setLiberado] = useState(semSidebar);
 
   useEffect(() => {
-    // Se não há flag de sessão desta aba, força logout e redireciona para login
-    if (!sessionStorage.getItem("acampa_tab")) {
+    if (semSidebar) return;
+
+    if (sessionStorage.getItem("acampa_tab")) {
+      setLiberado(true);
+    } else {
+      // Sem flag de sessão: limpa cookie e manda para login
       fetch("/api/logout", { method: "POST" }).finally(() => {
         window.location.href = "/";
       });
     }
-  }, []);
+  }, [semSidebar]);
 
-  const semSidebar =
-    pathname === "/login" ||
-    pathname.startsWith("/autorizacao/assinar/");
+  if (!liberado) return null;
 
   if (semSidebar) return <>{children}</>;
 
