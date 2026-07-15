@@ -10,17 +10,13 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const cookieStore = await cookies();
-  const isAuth = cookieStore.get("acampa_auth")?.value === "ok_hermom2026";
+  const store = await cookies();
+  const isAuth = store.get("acampa_auth")?.value === "acampa2026_v2";
 
   return (
     <html lang="pt-BR">
       <body>
-        {isAuth ? (
-          <AppShell>{children}</AppShell>
-        ) : (
-          <LoginForm />
-        )}
+        {isAuth ? <AppShell>{children}</AppShell> : <LoginForm />}
       </body>
     </html>
   );

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const PIN   = "wDj@180115";
-const TOKEN = "ok_hermom2026";
+const TOKEN = "acampa2026_v2";
 
 export async function POST(request: NextRequest) {
   try {
