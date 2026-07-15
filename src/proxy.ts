@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const TOKEN = "acampa2026_v2";
+const TOKEN = "acampa_v5_final";
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
