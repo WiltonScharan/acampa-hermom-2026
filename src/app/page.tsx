@@ -1,9 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { useInscricoes } from "@/hooks/useInscricoes";
 import { formatarMoeda } from "@/lib/utils";
 import { InscricaoComCalculo } from "@/types";
-import { TrendingUp, Users, Calendar } from "lucide-react";
+import { TrendingUp, Users, Calendar, Eye, EyeOff } from "lucide-react";
 
 interface CardAnalProps {
   label: string;
@@ -41,6 +42,7 @@ function CardFinanceiro({ label, valor, sub, cor }: { label: string; valor: stri
 
 export default function DashboardPage() {
   const { inscricoes, loading } = useInscricoes();
+  const [mostrarResumo, setMostrarResumo] = useState(false);
 
   if (loading) {
     return (
@@ -94,38 +96,56 @@ export default function DashboardPage() {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-800">Acampa Hermom 2026</h1>
-        <p className="text-sm text-gray-500 flex items-center gap-1.5 mt-1">
-          <Calendar size={14} />
-          19 a 22 de novembro de 2026 · Monte Horebe, Cesário Lange/SP
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">Acampa Hermom 2026</h1>
+          <p className="text-sm text-gray-500 flex items-center gap-1.5 mt-1">
+            <Calendar size={14} />
+            19 a 22 de novembro de 2026 · Monte Horebe, Cesário Lange/SP
+          </p>
+        </div>
+        <button
+          onClick={() => setMostrarResumo(!mostrarResumo)}
+          className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors"
+          style={{
+            background: mostrarResumo ? "#fff7ed" : "white",
+            borderColor: mostrarResumo ? "#f97316" : "#e5e7eb",
+            color: mostrarResumo ? "#ea580c" : "#6b7280",
+          }}
+          title={mostrarResumo ? "Ocultar resumo financeiro" : "Mostrar resumo financeiro"}
+        >
+          {mostrarResumo ? <EyeOff size={16} /> : <Eye size={16} />}
+          <span>{mostrarResumo ? "Ocultar" : "Resumo"}</span>
+        </button>
       </div>
 
-      {/* Financeiro — somente inscritos ativos + devolvidos */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        <CardFinanceiro label="Total Inscritos" valor={String(total)} sub={`${homens}H / ${mulheres}M`} />
-        <CardFinanceiro label="Total a Arrecadar" valor={formatarMoeda(totalArrecadar)} />
-        <CardFinanceiro label="Total Pago" valor={formatarMoeda(totalPago)} />
-        <CardFinanceiro label="A Receber" valor={formatarMoeda(totalAPagar)} sub={totalAPagar > 0 ? "pendente" : "quitado"} />
-        <CardFinanceiro label="Valores Devolvidos" valor={formatarMoeda(totalDevolvidos)} cor="text-orange-600" />
-      </div>
+      {/* Financeiro e Status — visíveis apenas quando mostrarResumo = true */}
+      {mostrarResumo && (
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            <CardFinanceiro label="Total Inscritos" valor={String(total)} sub={`${homens}H / ${mulheres}M`} />
+            <CardFinanceiro label="Total a Arrecadar" valor={formatarMoeda(totalArrecadar)} />
+            <CardFinanceiro label="Total Pago" valor={formatarMoeda(totalPago)} />
+            <CardFinanceiro label="A Receber" valor={formatarMoeda(totalAPagar)} sub={totalAPagar > 0 ? "pendente" : "quitado"} />
+            <CardFinanceiro label="Valores Devolvidos" valor={formatarMoeda(totalDevolvidos)} cor="text-orange-600" />
+          </div>
 
-      {/* Status */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="card text-center">
-          <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Confirmados</p>
-          <p className="text-2xl font-bold text-green-600">{confirmados}</p>
-        </div>
-        <div className="card text-center">
-          <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Pendentes</p>
-          <p className="text-2xl font-bold text-yellow-600">{pendentes}</p>
-        </div>
-        <div className="card text-center">
-          <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Cancelados</p>
-          <p className="text-2xl font-bold text-red-600">{cancelados.length}</p>
-        </div>
-      </div>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="card text-center">
+              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Confirmados</p>
+              <p className="text-2xl font-bold text-green-600">{confirmados}</p>
+            </div>
+            <div className="card text-center">
+              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Pendentes</p>
+              <p className="text-2xl font-bold text-yellow-600">{pendentes}</p>
+            </div>
+            <div className="card text-center">
+              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Cancelados</p>
+              <p className="text-2xl font-bold text-red-600">{cancelados.length}</p>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Grid analítico — apenas ativos */}
       <div>
