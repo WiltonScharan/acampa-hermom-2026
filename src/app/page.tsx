@@ -6,6 +6,47 @@ import { formatarMoeda } from "@/lib/utils";
 import { InscricaoComCalculo } from "@/types";
 import { TrendingUp, Users, Calendar, Eye, EyeOff } from "lucide-react";
 
+function ToggleSwitch({ visivel, onToggle }: { visivel: boolean; onToggle: () => void }) {
+  return (
+    <button
+      onClick={onToggle}
+      title={visivel ? "Ocultar valores" : "Mostrar valores"}
+      style={{
+        position: "relative",
+        width: "52px",
+        height: "28px",
+        borderRadius: "14px",
+        background: visivel ? "#f97316" : "#e2e8f0",
+        border: "none",
+        cursor: "pointer",
+        transition: "background 0.25s",
+        flexShrink: 0,
+      }}
+    >
+      <span style={{
+        position: "absolute",
+        top: "3px",
+        left: "3px",
+        width: "22px",
+        height: "22px",
+        borderRadius: "50%",
+        background: "white",
+        boxShadow: "0 1px 4px rgba(0,0,0,0.2)",
+        transition: "transform 0.25s",
+        transform: visivel ? "translateX(24px)" : "translateX(0)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}>
+        {visivel
+          ? <Eye size={11} color="#ea580c" />
+          : <EyeOff size={11} color="#9ca3af" />
+        }
+      </span>
+    </button>
+  );
+}
+
 interface CardAnalProps {
   label: string;
   children: React.ReactNode;
@@ -30,12 +71,14 @@ function Linha({ label, valor }: { label: string; valor: string | number }) {
   );
 }
 
-function CardFinanceiro({ label, valor, sub, cor }: { label: string; valor: string; sub?: string; cor?: string }) {
+function CardFinanceiro({ label, valor, sub, cor, oculto }: { label: string; valor: string; sub?: string; cor?: string; oculto?: boolean }) {
   return (
     <div className="card text-center">
       <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">{label}</p>
-      <p className={`text-2xl font-bold ${cor ?? "text-gray-800"}`}>{valor}</p>
-      {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+      <p className={`text-2xl font-bold ${oculto ? "text-gray-300" : (cor ?? "text-gray-800")}`}>
+        {oculto ? "— — —" : valor}
+      </p>
+      {sub && <p className="text-xs text-gray-400 mt-0.5">{oculto ? "" : sub}</p>}
     </div>
   );
 }
@@ -104,48 +147,39 @@ export default function DashboardPage() {
             19 a 22 de novembro de 2026 · Monte Horebe, Cesário Lange/SP
           </p>
         </div>
-        <button
-          onClick={() => setMostrarResumo(!mostrarResumo)}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors"
-          style={{
-            background: mostrarResumo ? "#fff7ed" : "white",
-            borderColor: mostrarResumo ? "#f97316" : "#e5e7eb",
-            color: mostrarResumo ? "#ea580c" : "#6b7280",
-          }}
-          title={mostrarResumo ? "Ocultar resumo financeiro" : "Mostrar resumo financeiro"}
-        >
-          {mostrarResumo ? <EyeOff size={16} /> : <Eye size={16} />}
-          <span>{mostrarResumo ? "Ocultar" : "Resumo"}</span>
-        </button>
+        <ToggleSwitch visivel={mostrarResumo} onToggle={() => setMostrarResumo(!mostrarResumo)} />
       </div>
 
-      {/* Financeiro e Status — visíveis apenas quando mostrarResumo = true */}
-      {mostrarResumo && (
-        <>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            <CardFinanceiro label="Total Inscritos" valor={String(total)} sub={`${homens}H / ${mulheres}M`} />
-            <CardFinanceiro label="Total a Arrecadar" valor={formatarMoeda(totalArrecadar)} />
-            <CardFinanceiro label="Total Pago" valor={formatarMoeda(totalPago)} />
-            <CardFinanceiro label="A Receber" valor={formatarMoeda(totalAPagar)} sub={totalAPagar > 0 ? "pendente" : "quitado"} />
-            <CardFinanceiro label="Valores Devolvidos" valor={formatarMoeda(totalDevolvidos)} cor="text-orange-600" />
-          </div>
+      {/* Financeiro — sempre visível, valores mascarados quando oculto */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        <CardFinanceiro label="Total Inscritos" valor={String(total)} sub={`${homens}H / ${mulheres}M`} oculto={!mostrarResumo} />
+        <CardFinanceiro label="Total a Arrecadar" valor={formatarMoeda(totalArrecadar)} oculto={!mostrarResumo} />
+        <CardFinanceiro label="Total Pago" valor={formatarMoeda(totalPago)} oculto={!mostrarResumo} />
+        <CardFinanceiro label="A Receber" valor={formatarMoeda(totalAPagar)} sub={totalAPagar > 0 ? "pendente" : "quitado"} oculto={!mostrarResumo} />
+        <CardFinanceiro label="Valores Devolvidos" valor={formatarMoeda(totalDevolvidos)} cor="text-orange-600" oculto={!mostrarResumo} />
+      </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <div className="card text-center">
-              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Confirmados</p>
-              <p className="text-2xl font-bold text-green-600">{confirmados}</p>
-            </div>
-            <div className="card text-center">
-              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Pendentes</p>
-              <p className="text-2xl font-bold text-yellow-600">{pendentes}</p>
-            </div>
-            <div className="card text-center">
-              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Cancelados</p>
-              <p className="text-2xl font-bold text-red-600">{cancelados.length}</p>
-            </div>
-          </div>
-        </>
-      )}
+      {/* Status */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="card text-center">
+          <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Confirmados</p>
+          <p className={`text-2xl font-bold ${mostrarResumo ? "text-green-600" : "text-gray-300"}`}>
+            {mostrarResumo ? confirmados : "—"}
+          </p>
+        </div>
+        <div className="card text-center">
+          <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Pendentes</p>
+          <p className={`text-2xl font-bold ${mostrarResumo ? "text-yellow-600" : "text-gray-300"}`}>
+            {mostrarResumo ? pendentes : "—"}
+          </p>
+        </div>
+        <div className="card text-center">
+          <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Cancelados</p>
+          <p className={`text-2xl font-bold ${mostrarResumo ? "text-red-600" : "text-gray-300"}`}>
+            {mostrarResumo ? cancelados.length : "—"}
+          </p>
+        </div>
+      </div>
 
       {/* Grid analítico — apenas ativos */}
       <div>
