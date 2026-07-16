@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useInscricoes } from "@/hooks/useInscricoes";
 import { formatarMoeda } from "@/lib/utils";
 import { InscricaoComCalculo } from "@/types";
@@ -87,6 +87,17 @@ export default function DashboardPage() {
   const { inscricoes, loading } = useInscricoes();
   const [mostrarResumo, setMostrarResumo] = useState(false);
 
+  // Lê do sessionStorage após montar — persiste na aba, some ao fechar ou sair
+  useEffect(() => {
+    setMostrarResumo(sessionStorage.getItem("dashboard_resumo") === "1");
+  }, []);
+
+  function toggleResumo() {
+    const novo = !mostrarResumo;
+    setMostrarResumo(novo);
+    sessionStorage.setItem("dashboard_resumo", novo ? "1" : "0");
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -147,7 +158,7 @@ export default function DashboardPage() {
             19 a 22 de novembro de 2026 · Monte Horebe, Cesário Lange/SP
           </p>
         </div>
-        <ToggleSwitch visivel={mostrarResumo} onToggle={() => setMostrarResumo(!mostrarResumo)} />
+        <ToggleSwitch visivel={mostrarResumo} onToggle={toggleResumo} />
       </div>
 
       {/* Financeiro — sempre visível, valores mascarados quando oculto */}

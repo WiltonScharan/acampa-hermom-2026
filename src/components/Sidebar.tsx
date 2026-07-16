@@ -106,7 +106,7 @@ export default function Sidebar() {
       {/* Botão sair */}
       <button
         onClick={async () => {
-          sessionStorage.removeItem("acampa_tab");
+          sessionStorage.clear();
           await fetch("/api/logout", { method: "POST" });
           window.location.href = "/";
         }}
