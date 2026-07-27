@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useInscricoes } from "@/hooks/useInscricoes";
+import { useRole } from "@/hooks/useRole";
 import { InscricaoComCalculo } from "@/types";
 import { formatarMoeda, formatarData, LABEL_TIPO_QUARTO } from "@/lib/utils";
 import { Pencil, Bus, Search } from "lucide-react";
@@ -18,7 +19,7 @@ interface Props {
   grupos: GrupoConfig[];
 }
 
-function TabelaGrupo({ titulo, inscritos }: { titulo: string; inscritos: InscricaoComCalculo[] }) {
+function TabelaGrupo({ titulo, inscritos, isAdmin }: { titulo: string; inscritos: InscricaoComCalculo[]; isAdmin: boolean }) {
   return (
     <div className="card">
       <div className="flex items-center justify-between mb-4">
@@ -63,9 +64,11 @@ function TabelaGrupo({ titulo, inscritos }: { titulo: string; inscritos: Inscric
                     {formatarMoeda(ins.valorAPagar)}
                   </td>
                   <td className="py-2.5 text-center">
-                    <Link href={`/inscritos/${ins.id}`} className="text-primary-600 hover:text-primary-800">
-                      <Pencil size={14} />
-                    </Link>
+                    {isAdmin && (
+                      <Link href={`/inscritos/${ins.id}`} className="text-primary-600 hover:text-primary-800">
+                        <Pencil size={14} />
+                      </Link>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -79,6 +82,8 @@ function TabelaGrupo({ titulo, inscritos }: { titulo: string; inscritos: Inscric
 
 export default function CategoriaTab({ titulo, descricao, grupos }: Props) {
   const { inscricoes, loading } = useInscricoes();
+  const role = useRole();
+  const isAdmin = role === "admin";
   const [busca, setBusca] = useState("");
   const [filtroQuarto, setFiltroQuarto] = useState("");
 
@@ -141,6 +146,7 @@ export default function CategoriaTab({ titulo, descricao, grupos }: Props) {
           key={g.label}
           titulo={g.label}
           inscritos={filtrados.filter(g.filtro)}
+          isAdmin={isAdmin}
         />
       ))}
     </div>

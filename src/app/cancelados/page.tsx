@@ -3,11 +3,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useInscricoes } from "@/hooks/useInscricoes";
+import { useRole } from "@/hooks/useRole";
 import { formatarMoeda, formatarData, LABEL_TIPO_QUARTO } from "@/lib/utils";
 import { Ban, Search, Pencil, Info, MessageSquare, X } from "lucide-react";
 
 export default function CanceladosPage() {
   const { inscricoes, loading } = useInscricoes();
+  const role = useRole();
+  const isAdmin = role === "admin";
   const [busca, setBusca] = useState("");
   const [filtroQuarto, setFiltroQuarto] = useState("");
   const [obsAberta, setObsAberta] = useState<{ nome: string; texto: string } | null>(null);
@@ -158,9 +161,11 @@ export default function CanceladosPage() {
                         )}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <Link href={`/inscritos/${ins.id}`} className="text-primary-600 hover:text-primary-800">
-                          <Pencil size={14} />
-                        </Link>
+                        {isAdmin && (
+                          <Link href={`/inscritos/${ins.id}`} className="text-primary-600 hover:text-primary-800">
+                            <Pencil size={14} />
+                          </Link>
+                        )}
                       </td>
                     </tr>
                   ))}

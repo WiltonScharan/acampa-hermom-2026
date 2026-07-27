@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useInscricoes } from "@/hooks/useInscricoes";
+import { useRole } from "@/hooks/useRole";
 import {
   formatarMoeda,
   formatarData,
@@ -28,6 +29,8 @@ import { InscricaoComCalculo, StatusInscricao } from "@/types";
 
 export default function InscritosPage() {
   const { inscricoes, loading } = useInscricoes();
+  const role = useRole();
+  const isAdmin = role === "admin";
   const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("");
   const [filtroQuarto, setFiltroQuarto] = useState("");
@@ -198,10 +201,12 @@ export default function InscritosPage() {
           <h1 className="text-2xl font-bold text-gray-800">Inscritos</h1>
           <p className="text-sm text-gray-500">{inscricoes.filter(i => i.status !== "cancelado").length} inscrição(ões) no total</p>
         </div>
-        <Link href="/inscritos/novo" className="btn-primary flex items-center gap-2">
-          <Plus size={16} />
-          Nova Inscrição
-        </Link>
+        {isAdmin && (
+          <Link href="/inscritos/novo" className="btn-primary flex items-center gap-2">
+            <Plus size={16} />
+            Nova Inscrição
+          </Link>
+        )}
       </div>
 
       {/* Filtros */}
@@ -357,12 +362,16 @@ export default function InscritosPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-2" onClick={(e) => e.stopPropagation()}>
-                        <Link href={`/inscritos/${ins.id}`} className="text-primary-600 hover:text-primary-800 p-1" title="Editar">
-                          <Pencil size={15} />
-                        </Link>
-                        <button onClick={() => handleExcluir(ins.id, ins.nome)} className="text-red-500 hover:text-red-700 p-1" title="Excluir">
-                          <Trash2 size={15} />
-                        </button>
+                        {isAdmin && (
+                          <>
+                            <Link href={`/inscritos/${ins.id}`} className="text-primary-600 hover:text-primary-800 p-1" title="Editar">
+                              <Pencil size={15} />
+                            </Link>
+                            <button onClick={() => handleExcluir(ins.id, ins.nome)} className="text-red-500 hover:text-red-700 p-1" title="Excluir">
+                              <Trash2 size={15} />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>

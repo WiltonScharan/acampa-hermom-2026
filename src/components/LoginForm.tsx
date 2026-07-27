@@ -19,7 +19,9 @@ export default function LoginForm() {
         body: JSON.stringify({ pin }),
       });
       if (res.ok) {
+        const data = await res.json();
         sessionStorage.setItem("acampa_tab", "1");
+        sessionStorage.setItem("acampa_role", data.role ?? "admin");
         window.location.href = "/";
       } else {
         setErro(true);

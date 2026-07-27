@@ -17,6 +17,10 @@ export default function EditarInscricaoPage() {
   const [loadingDados, setLoadingDados] = useState(true);
 
   useEffect(() => {
+    if (sessionStorage.getItem("acampa_role") === "viewer") router.replace("/inscritos");
+  }, [router]);
+
+  useEffect(() => {
     buscarInscricao(id).then((data) => {
       setInscricao(data);
       setLoadingDados(false);

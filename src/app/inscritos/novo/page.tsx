@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import InscricaoForm from "@/components/InscricaoForm";
 import { criarInscricao } from "@/lib/firestore";
 import { InscricaoForm as IForm } from "@/types";
@@ -9,6 +9,10 @@ import { InscricaoForm as IForm } from "@/types";
 export default function NovaInscricaoPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (sessionStorage.getItem("acampa_role") === "viewer") router.replace("/inscritos");
+  }, [router]);
 
   async function handleSubmit(data: IForm) {
     setLoading(true);
