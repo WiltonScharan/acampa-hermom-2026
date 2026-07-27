@@ -5,8 +5,11 @@ import { ouvirListaEspera, adicionarListaEspera, atualizarListaEspera, excluirLi
 import { formatarTelefone, whatsAppLink } from "@/lib/utils";
 import { ItemListaEspera } from "@/types";
 import { Plus, Trash2, Home, MessageCircle, Pencil, Check, X } from "lucide-react";
+import { useRole } from "@/hooks/useRole";
 
 export default function ListaEsperaPage() {
+  const role = useRole();
+  const isAdmin = role === "admin";
   const [lista, setLista] = useState<ItemListaEspera[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -97,7 +100,7 @@ export default function ListaEsperaPage() {
             {lista.length} casal(is) na fila • por ordem de chegada
           </p>
         </div>
-        {!adicionando && (
+        {!adicionando && isAdmin && (
           <button
             onClick={() => setAdicionando(true)}
             className="btn-primary flex items-center gap-2"
@@ -211,22 +214,24 @@ export default function ListaEsperaPage() {
                     </td>
                     <td className="px-4 py-3 text-gray-500 text-xs">{item.observacoes || <span className="text-gray-300">—</span>}</td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center justify-center gap-1.5">
-                        <button
-                          onClick={() => startEdit(item)}
-                          className="p-1.5 text-primary-500 hover:text-primary-700 hover:bg-primary-50 rounded-lg"
-                          title="Editar"
-                        >
-                          <Pencil size={14} />
-                        </button>
-                        <button
-                          onClick={() => handleExcluir(item.id, item.nomeCasal)}
-                          className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
-                          title="Remover"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
+                      {isAdmin && (
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            onClick={() => startEdit(item)}
+                            className="p-1.5 text-primary-500 hover:text-primary-700 hover:bg-primary-50 rounded-lg"
+                            title="Editar"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button
+                            onClick={() => handleExcluir(item.id, item.nomeCasal)}
+                            className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                            title="Remover"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </>
                 )}

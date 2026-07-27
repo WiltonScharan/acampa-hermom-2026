@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ouvirAnotacoes, criarAnotacao, atualizarAnotacao, excluirAnotacao, Anotacao } from "@/lib/firestore";
 import { NotebookPen, Plus, Trash2, Check } from "lucide-react";
+import { useRole } from "@/hooks/useRole";
 
 const CORES: { valor: string; bg: string; borda: string; titulo: string }[] = [
   { valor: "yellow",  bg: "bg-yellow-50",  borda: "border-yellow-300", titulo: "text-yellow-800" },
@@ -17,7 +18,7 @@ function corConfig(cor: string) {
   return CORES.find((c) => c.valor === cor) ?? CORES[0];
 }
 
-function NotaCard({ nota, onDelete }: { nota: Anotacao; onDelete: () => void }) {
+function NotaCard({ nota, onDelete, isAdmin }: { nota: Anotacao; onDelete: () => void; isAdmin: boolean }) {
   const [titulo, setTitulo] = useState(nota.titulo);
   const [conteudo, setConteudo] = useState(nota.conteudo);
   const [cor, setCor] = useState(nota.cor || "yellow");
@@ -54,9 +55,11 @@ function NotaCard({ nota, onDelete }: { nota: Anotacao; onDelete: () => void }) 
       <input
         type="text"
         placeholder="Título..."
-        className={`bg-transparent font-semibold text-base placeholder-opacity-50 outline-none border-none w-full ${cfg.titulo}`}
+        readOnly={!isAdmin}
+        className={`bg-transparent font-semibold text-base placeholder-opacity-50 outline-none border-none w-full ${cfg.titulo} ${!isAdmin ? "cursor-default select-text" : ""}`}
         value={titulo}
         onChange={(e) => {
+          if (!isAdmin) return;
           setTitulo(e.target.value);
           agendar({ titulo: e.target.value });
         }}
@@ -66,9 +69,11 @@ function NotaCard({ nota, onDelete }: { nota: Anotacao; onDelete: () => void }) 
       <textarea
         placeholder="Escreva aqui..."
         rows={5}
-        className="bg-transparent text-sm text-gray-700 resize-none outline-none border-none w-full placeholder-gray-400 leading-relaxed"
+        readOnly={!isAdmin}
+        className={`bg-transparent text-sm text-gray-700 resize-none outline-none border-none w-full placeholder-gray-400 leading-relaxed ${!isAdmin ? "cursor-default" : ""}`}
         value={conteudo}
         onChange={(e) => {
+          if (!isAdmin) return;
           setConteudo(e.target.value);
           agendar({ conteudo: e.target.value });
         }}
@@ -77,19 +82,23 @@ function NotaCard({ nota, onDelete }: { nota: Anotacao; onDelete: () => void }) 
       {/* Rodapé */}
       <div className="flex items-center justify-between pt-1 border-t border-black/5">
         {/* Seletor de cor */}
-        <div className="flex items-center gap-1.5">
-          {CORES.map((c) => (
-            <button
-              key={c.valor}
-              onClick={() => mudarCor(c.valor)}
-              className={`w-4 h-4 rounded-full border-2 transition-transform ${
-                cor === c.valor ? "scale-125 border-gray-500" : "border-transparent"
-              } bg-${c.valor}-300`}
-              style={{ backgroundColor: colorHex(c.valor) }}
-              title={c.valor}
-            />
-          ))}
-        </div>
+        {isAdmin ? (
+          <div className="flex items-center gap-1.5">
+            {CORES.map((c) => (
+              <button
+                key={c.valor}
+                onClick={() => mudarCor(c.valor)}
+                className={`w-4 h-4 rounded-full border-2 transition-transform ${
+                  cor === c.valor ? "scale-125 border-gray-500" : "border-transparent"
+                } bg-${c.valor}-300`}
+                style={{ backgroundColor: colorHex(c.valor) }}
+                title={c.valor}
+              />
+            ))}
+          </div>
+        ) : (
+          <span />
+        )}
 
         {/* Status + Excluir */}
         <div className="flex items-center gap-3">
@@ -99,15 +108,17 @@ function NotaCard({ nota, onDelete }: { nota: Anotacao; onDelete: () => void }) 
               <Check size={11} /> Salvo
             </span>
           )}
-          <button
-            onClick={() => {
-              if (confirm("Excluir esta anotação?")) onDelete();
-            }}
-            className="text-gray-400 hover:text-red-500 transition-colors"
-            title="Excluir anotação"
-          >
-            <Trash2 size={14} />
-          </button>
+          {isAdmin && (
+            <button
+              onClick={() => {
+                if (confirm("Excluir esta anotação?")) onDelete();
+              }}
+              className="text-gray-400 hover:text-red-500 transition-colors"
+              title="Excluir anotação"
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -127,6 +138,8 @@ function colorHex(cor: string): string {
 }
 
 export default function AnotacoesPage() {
+  const role = useRole();
+  const isAdmin = role === "admin";
   const [anotacoes, setAnotacoes] = useState<Anotacao[]>([]);
   const [loading, setLoading] = useState(true);
   const [criando, setCriando] = useState(false);
@@ -164,14 +177,16 @@ export default function AnotacoesPage() {
             <p className="text-sm text-gray-500">{anotacoes.length} anotação(ões)</p>
           </div>
         </div>
-        <button
-          onClick={handleNova}
-          disabled={criando}
-          className="btn-primary flex items-center gap-2"
-        >
-          <Plus size={16} />
-          {criando ? "Criando..." : "Nova Anotação"}
-        </button>
+        {isAdmin && (
+          <button
+            onClick={handleNova}
+            disabled={criando}
+            className="btn-primary flex items-center gap-2"
+          >
+            <Plus size={16} />
+            {criando ? "Criando..." : "Nova Anotação"}
+          </button>
+        )}
       </div>
 
       {anotacoes.length === 0 ? (
@@ -187,6 +202,7 @@ export default function AnotacoesPage() {
               <NotaCard
                 nota={nota}
                 onDelete={() => excluirAnotacao(nota.id)}
+                isAdmin={isAdmin}
               />
             </div>
           ))}

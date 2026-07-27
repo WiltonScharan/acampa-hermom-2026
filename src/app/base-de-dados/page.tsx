@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import * as XLSX from "xlsx";
+import { useRole } from "@/hooks/useRole";
 import { criarInscricao, listarInscricoes, contarInscricoesImportadas, excluirInscricoesImportadas } from "@/lib/firestore";
 import { calcularValorTotal, inferirGenero } from "@/lib/utils";
 import { InscricaoForm, TipoQuarto, Genero } from "@/types";
@@ -179,6 +181,13 @@ interface ResultadoImport { nome: string; status: "ok" | "erro"; mensagem?: stri
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export default function BaseDadosPage() {
+  const role = useRole();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (role === "viewer") router.replace("/");
+  }, [role, router]);
+
   const [novas, setNovas] = useState<LinhaRaw[]>([]);
   const [existentes, setExistentes] = useState<LinhaRaw[]>([]);
   const [verificando, setVerificando] = useState(false);
