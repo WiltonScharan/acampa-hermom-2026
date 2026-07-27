@@ -376,13 +376,13 @@ export default function BaseDadosPage() {
   const totalParaImportar = novas.length + descSelecionadas.size + (incluirExistentes ? existentes.length : 0);
 
   return (
-    <div className="p-6 space-y-5 max-w-4xl">
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">Base de Dados</h1>
+    <div className="p-4 md:p-6 space-y-4 md:space-y-5 max-w-4xl">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div className="min-w-0">
+          <h1 className="text-xl md:text-2xl font-bold text-gray-800">Base de Dados</h1>
           <p className="text-sm text-gray-500">Importe inscrições em lote — detecta automaticamente quem já está cadastrado</p>
         </div>
-        <button onClick={baixarModelo} className="btn-secondary flex items-center gap-2 text-sm">
+        <button onClick={baixarModelo} className="btn-secondary flex items-center gap-2 text-sm flex-shrink-0">
           <Download size={15} /> Baixar Modelo CSV
         </button>
       </div>

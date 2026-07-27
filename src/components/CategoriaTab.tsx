@@ -107,10 +107,10 @@ export default function CategoriaTab({ titulo, descricao, grupos }: Props) {
   const total = grupos.reduce((sum, g) => sum + filtrados.filter(g.filtro).length, 0);
 
   return (
-    <div className="p-6 space-y-5">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-5">
       <div>
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-gray-800">{titulo}</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-gray-800">{titulo}</h1>
           <span className="bg-primary-600 text-white text-sm font-bold px-3 py-0.5 rounded-full">
             {total}
           </span>

@@ -88,12 +88,12 @@ export default function ListaEsperaPage() {
   }
 
   return (
-    <div className="p-6 space-y-5">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <Home size={22} className="text-primary-600" />
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="min-w-0">
+          <h1 className="text-xl md:text-2xl font-bold text-gray-800 flex items-center gap-2">
+            <Home size={20} className="text-primary-600 flex-shrink-0" />
             Lista de Espera — Village
           </h1>
           <p className="text-sm text-gray-500 mt-0.5">

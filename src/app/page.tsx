@@ -75,7 +75,7 @@ function CardFinanceiro({ label, valor, sub, cor, oculto }: { label: string; val
   return (
     <div className="card text-center">
       <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">{label}</p>
-      <p className={`text-2xl font-bold ${oculto ? "text-gray-300" : (cor ?? "text-gray-800")}`}>
+      <p className={`text-lg md:text-2xl font-bold ${oculto ? "text-gray-300" : (cor ?? "text-gray-800")}`}>
         {oculto ? "— — —" : valor}
       </p>
       {sub && <p className="text-xs text-gray-400 mt-0.5">{oculto ? "" : sub}</p>}
@@ -148,21 +148,21 @@ export default function DashboardPage() {
   const totalDevolvidos = inscricoes.reduce((s, i) => s + (i.valorDevolvido || 0), 0);
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">Acampa Hermom 2026</h1>
-          <p className="text-sm text-gray-500 flex items-center gap-1.5 mt-1">
-            <Calendar size={14} />
-            19 a 22 de novembro de 2026 · Monte Horebe, Cesário Lange/SP
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-xl md:text-2xl font-bold text-gray-800">Acampa Hermom 2026</h1>
+          <p className="text-xs md:text-sm text-gray-500 flex items-center gap-1.5 mt-1 flex-wrap">
+            <Calendar size={13} />
+            <span>19 a 22 de novembro de 2026 · Monte Horebe/SP</span>
           </p>
         </div>
         <ToggleSwitch visivel={mostrarResumo} onToggle={toggleResumo} />
       </div>
 
       {/* Financeiro — sempre visível, valores mascarados quando oculto */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
         <CardFinanceiro label="Total Inscritos" valor={String(total)} sub={`${homens}H / ${mulheres}M`} oculto={!mostrarResumo} />
         <CardFinanceiro label="Total a Arrecadar" valor={formatarMoeda(totalArrecadar)} oculto={!mostrarResumo} />
         <CardFinanceiro label="Total Pago" valor={formatarMoeda(totalPago)} oculto={!mostrarResumo} />
@@ -171,7 +171,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Status */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-3 md:gap-4">
         <div className="card text-center">
           <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Confirmados</p>
           <p className={`text-2xl font-bold ${mostrarResumo ? "text-green-600" : "text-gray-300"}`}>
@@ -198,7 +198,7 @@ export default function DashboardPage() {
           <TrendingUp size={18} className="text-primary-600" />
           Distribuição por Categoria
         </h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
           <CardAnal label="Total Inscritos" accent>
             <Linha label="Inscritos" valor={total} />
             <Linha label="Homens" valor={homens} />

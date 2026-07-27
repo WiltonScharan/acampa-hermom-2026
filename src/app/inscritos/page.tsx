@@ -194,17 +194,18 @@ export default function InscritosPage() {
   const saldoDevAnterior = modalDevIns ? Math.max(0, (modalDevIns.valorDevolvido || 0) - sumDevHistory) : 0;
 
   return (
-    <div className="p-6 space-y-5">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">Inscritos</h1>
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-xl md:text-2xl font-bold text-gray-800">Inscritos</h1>
           <p className="text-sm text-gray-500">{inscricoes.filter(i => i.status !== "cancelado").length} inscrição(ões) no total</p>
         </div>
         {isAdmin && (
-          <Link href="/inscritos/novo" className="btn-primary flex items-center gap-2">
+          <Link href="/inscritos/novo" className="btn-primary flex items-center gap-2 flex-shrink-0 text-sm">
             <Plus size={16} />
-            Nova Inscrição
+            <span className="hidden sm:inline">Nova Inscrição</span>
+            <span className="sm:hidden">Nova</span>
           </Link>
         )}
       </div>

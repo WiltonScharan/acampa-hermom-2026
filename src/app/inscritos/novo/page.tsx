@@ -25,7 +25,7 @@ export default function NovaInscricaoPage() {
   }
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <div className="p-4 md:p-6 max-w-3xl mx-auto">
       <InscricaoForm onSubmit={handleSubmit} loading={loading} titulo="Nova Inscrição" />
     </div>
   );

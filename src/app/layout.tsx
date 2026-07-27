@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { headers } from "next/headers";
 import AppShell from "@/components/AppShell";
@@ -7,6 +7,12 @@ import LoginForm from "@/components/LoginForm";
 export const metadata: Metadata = {
   title: "Acampa Hermom 2026",
   description: "Gestão de inscrições do Acampamento Hermom 2026",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 // Força renderização dinâmica em TODA a aplicação — nunca cache
@@ -31,7 +37,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang="pt-BR">
-      <body>
+      <body className="overflow-x-hidden">
         {isAuth ? <AppShell>{children}</AppShell> : <LoginForm />}
       </body>
     </html>

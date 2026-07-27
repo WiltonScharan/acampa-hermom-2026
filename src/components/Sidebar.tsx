@@ -3,25 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
 import {
-  LayoutDashboard,
-  Users,
-  Home,
-  Star,
-  Baby,
-  PersonStanding,
-  User,
-  Bus,
-  ChevronLeft,
-  ChevronRight,
-  Tent,
-  Info,
-  FileText,
-  ListOrdered,
-  Ban,
-  NotebookPen,
-  LogOut,
+  LayoutDashboard, Users, Home, Star, Baby, PersonStanding, User, Bus,
+  ChevronLeft, ChevronRight, Tent, Info, FileText, ListOrdered, Ban,
+  NotebookPen, LogOut, X,
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -45,46 +30,63 @@ const navItems = [
   { href: "/base-de-dados", label: "Base de Dados", icon: Tent },
 ];
 
-export default function Sidebar() {
+interface SidebarProps {
+  collapsed: boolean;
+  onCollapsedChange: (v: boolean) => void;
+  mobileOpen: boolean;
+  onMobileClose: () => void;
+}
+
+export default function Sidebar({ collapsed, onCollapsedChange, mobileOpen, onMobileClose }: SidebarProps) {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false);
 
   return (
     <aside
       className={clsx(
-        "fixed left-0 top-0 h-full bg-white border-r border-gray-200 flex flex-col transition-all duration-300 z-40",
-        collapsed ? "w-16" : "w-60"
+        "fixed left-0 top-0 h-full bg-white border-r border-gray-200 flex flex-col z-40",
+        "transition-transform md:transition-all duration-300",
+        // Mobile: desliza para dentro/fora
+        mobileOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full",
+        // Desktop: sempre visível, ignora translate
+        "md:translate-x-0",
+        // Largura: no mobile usa 288px, no desktop respeita collapsed
+        "w-72",
+        collapsed ? "md:w-16" : "md:w-60",
       )}
     >
       {/* Logo */}
       <div className={clsx(
-        "flex items-center gap-3 border-b border-gray-100",
-        collapsed ? "px-3 py-3 justify-center" : "px-4 py-4"
+        "flex items-center gap-3 border-b border-gray-100 flex-shrink-0",
+        collapsed ? "md:px-3 md:py-3 md:justify-center px-4 py-3" : "px-4 py-3"
       )}>
-        <div className={clsx("flex-shrink-0 relative", collapsed ? "w-9 h-9" : "w-14 h-14")}>
-          <Image
-            src="/hermom.png"
-            alt="Igreja Hermom"
-            fill
-            className="rounded-xl object-cover"
-          />
+        <div className={clsx(
+          "flex-shrink-0 relative",
+          collapsed ? "md:w-9 md:h-9 w-10 h-10" : "w-10 h-10"
+        )}>
+          <Image src="/hermom.png" alt="Igreja Hermom" fill className="rounded-xl object-cover" />
         </div>
-        {!collapsed && (
-          <div className="overflow-hidden">
-            <p className="font-bold text-primary-700 text-base leading-tight">Acampa</p>
-            <p className="text-xs text-gray-500 leading-tight">Hermom 2026</p>
-          </div>
-        )}
+        <div className={clsx("overflow-hidden flex-1", collapsed ? "md:hidden" : "")}>
+          <p className="font-bold text-primary-700 text-base leading-tight">Acampa</p>
+          <p className="text-xs text-gray-500 leading-tight">Hermom 2026</p>
+        </div>
+        {/* Fechar — apenas mobile */}
+        <button
+          onClick={onMobileClose}
+          className="md:hidden flex-shrink-0 p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+        >
+          <X size={20} />
+        </button>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto py-3 px-2">
+      <nav className="flex-1 overflow-y-auto py-2 px-2">
         {navItems.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || (href !== "/" && pathname.startsWith(href));
           return (
             <Link
               key={href}
               href={href}
+              onClick={onMobileClose}
               className={clsx(
                 "flex items-center gap-3 px-3 py-2.5 rounded-lg mb-0.5 text-sm font-medium transition-colors",
                 active
@@ -93,11 +95,8 @@ export default function Sidebar() {
               )}
               title={collapsed ? label : undefined}
             >
-              <Icon
-                size={18}
-                className={clsx("flex-shrink-0", active ? "text-primary-600" : "text-gray-400")}
-              />
-              {!collapsed && <span className="truncate">{label}</span>}
+              <Icon size={18} className={clsx("flex-shrink-0", active ? "text-primary-600" : "text-gray-400")} />
+              <span className={clsx("truncate", collapsed ? "md:hidden" : "")}>{label}</span>
             </Link>
           );
         })}
@@ -111,19 +110,19 @@ export default function Sidebar() {
           window.location.href = "/";
         }}
         className={clsx(
-          "flex items-center gap-3 mx-2 mb-1 px-3 py-2.5 rounded-lg text-sm font-medium text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors",
-          collapsed ? "justify-center" : ""
+          "flex items-center gap-3 mx-2 mb-1 px-3 py-2.5 rounded-lg text-sm font-medium text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors flex-shrink-0",
+          collapsed ? "md:justify-center" : ""
         )}
         title={collapsed ? "Sair" : undefined}
       >
         <LogOut size={18} className="flex-shrink-0" />
-        {!collapsed && <span>Sair</span>}
+        <span className={clsx(collapsed ? "md:hidden" : "")}>Sair</span>
       </button>
 
-      {/* Collapse button */}
+      {/* Colapsar — apenas desktop */}
       <button
-        onClick={() => setCollapsed(!collapsed)}
-        className="flex items-center justify-center py-3 border-t border-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+        onClick={() => onCollapsedChange(!collapsed)}
+        className="hidden md:flex items-center justify-center py-3 border-t border-gray-100 text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
       >
         {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
       </button>

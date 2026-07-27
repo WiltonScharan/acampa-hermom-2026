@@ -34,7 +34,7 @@ export default function CanceladosPage() {
   const totalDevolvidos = cancelados.reduce((s, i) => s + (i.valorDevolvido || 0), 0);
 
   return (
-    <div className="p-6 space-y-5">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-5">
 
       {/* Modal de observação */}
       {obsAberta && (
@@ -61,9 +61,9 @@ export default function CanceladosPage() {
       )}
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Ban size={22} className="text-red-500" />
+        <Ban size={20} className="text-red-500 flex-shrink-0" />
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Cancelados</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-gray-800">Cancelados</h1>
           <p className="text-sm text-gray-500">{cancelados.length} inscrição(ões) cancelada(s)</p>
         </div>
       </div>

@@ -288,11 +288,11 @@ export default function InscricaoForm({ defaultValues, onSubmit, loading, titulo
         />
       </div>
 
-      <div className="flex gap-3 justify-end">
-        <button type="button" className="btn-secondary" onClick={() => window.history.back()}>
+      <div className="flex gap-3 justify-end flex-wrap">
+        <button type="button" className="btn-secondary flex-1 sm:flex-none" onClick={() => window.history.back()}>
           Cancelar
         </button>
-        <button type="submit" className="btn-primary" disabled={loading}>
+        <button type="submit" className="btn-primary flex-1 sm:flex-none" disabled={loading}>
           {loading ? "Salvando..." : "Salvar Inscrição"}
         </button>
       </div>
