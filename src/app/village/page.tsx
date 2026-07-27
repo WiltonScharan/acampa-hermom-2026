@@ -40,19 +40,19 @@ export default function VillagePage() {
   const totalCasais = nomesCasais.length;
 
   return (
-    <div className="p-6 space-y-5">
-      <div className="flex items-start justify-between">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-5">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Village</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-gray-800">Village</h1>
           <p className="text-sm text-gray-500 mt-1">Quartos exclusivos para casais</p>
         </div>
-        <div className="flex gap-3">
-          <div className="card py-3 px-4 text-center min-w-[80px]">
-            <p className="text-2xl font-bold text-primary-600">{totalCasais}</p>
+        <div className="flex gap-3 flex-shrink-0">
+          <div className="card py-3 px-4 text-center min-w-[72px]">
+            <p className="text-xl md:text-2xl font-bold text-primary-600">{totalCasais}</p>
             <p className="text-xs text-gray-500">Casais</p>
           </div>
-          <div className="card py-3 px-4 text-center min-w-[80px]">
-            <p className="text-2xl font-bold text-primary-600">{totalPessoas}</p>
+          <div className="card py-3 px-4 text-center min-w-[72px]">
+            <p className="text-xl md:text-2xl font-bold text-primary-600">{totalPessoas}</p>
             <p className="text-xs text-gray-500">Pessoas</p>
           </div>
         </div>
@@ -84,19 +84,19 @@ export default function VillagePage() {
 
         return (
           <div key={key} className="card border-l-4 border-l-primary-500">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Users size={16} className="text-primary-500" />
-                <h3 className="font-semibold text-gray-800">Casal #{idx + 1} — {nomeExibicao}</h3>
-                <span className="text-xs bg-primary-100 text-primary-700 px-2 py-0.5 rounded-full">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-3">
+              <div className="flex items-center gap-2 flex-wrap min-w-0">
+                <Users size={16} className="text-primary-500 flex-shrink-0" />
+                <h3 className="font-semibold text-gray-800 truncate">Casal #{idx + 1} — {nomeExibicao}</h3>
+                <span className="text-xs bg-primary-100 text-primary-700 px-2 py-0.5 rounded-full flex-shrink-0">
                   {membros.length} pessoa(s)
                 </span>
               </div>
-              <div className="flex gap-4 text-sm">
-                <span className="text-gray-500">Total: <strong>{formatarMoeda(totalCasal)}</strong></span>
-                <span className="text-green-700">Pago: <strong>{formatarMoeda(pagoCasal)}</strong></span>
+              <div className="flex gap-3 text-sm flex-wrap">
+                <span className="text-gray-500 whitespace-nowrap">Total: <strong>{formatarMoeda(totalCasal)}</strong></span>
+                <span className="text-green-700 whitespace-nowrap">Pago: <strong>{formatarMoeda(pagoCasal)}</strong></span>
                 {apagarCasal > 0 && (
-                  <span className="text-red-600">A pagar: <strong>{formatarMoeda(apagarCasal)}</strong></span>
+                  <span className="text-red-600 whitespace-nowrap">A pagar: <strong>{formatarMoeda(apagarCasal)}</strong></span>
                 )}
               </div>
             </div>
