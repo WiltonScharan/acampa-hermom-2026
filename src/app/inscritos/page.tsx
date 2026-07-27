@@ -255,7 +255,7 @@ export default function InscritosPage() {
                 </th>
                 <th className="text-right px-4 py-3 font-semibold text-gray-600">Total</th>
                 <th className="text-right px-4 py-3 font-semibold text-gray-600">Pago</th>
-                <th className="text-right px-4 py-3 font-semibold text-red-600">A Pagar</th>
+                <th className="text-right px-4 py-3 font-semibold text-red-600 whitespace-nowrap">A Pagar</th>
                 <th className="text-right px-4 py-3 font-semibold text-orange-600">Devolvido</th>
                 <th className="text-center px-4 py-3 font-semibold text-gray-600">Status</th>
                 <th className="text-center px-4 py-3 font-semibold text-gray-600">Ações</th>
