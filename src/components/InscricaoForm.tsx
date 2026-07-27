@@ -58,13 +58,11 @@ export default function InscricaoForm({ defaultValues, onSubmit, loading, titulo
       const cat = determinarCategoria(idade);
       setPreviewCategoria(`${idade} anos na data do evento — ${LABELS_CATEGORIA[cat]}`);
 
-      if (!defaultValues?.valorTotal) {
-        const calculado = calcularValorTotal(dataNascimento, tipoQuarto, onibus);
-        setPreviewValor(calculado);
-        setValue("valorTotal", calculado);
-      }
+      const calculado = calcularValorTotal(dataNascimento, tipoQuarto, onibus);
+      setPreviewValor(calculado);
+      setValue("valorTotal", calculado);
     }
-  }, [dataNascimento, tipoQuarto, onibus, defaultValues?.valorTotal, setValue]);
+  }, [dataNascimento, tipoQuarto, onibus, setValue]);
 
   function aplicarMascaraCPF(value: string) {
     return value

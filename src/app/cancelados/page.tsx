@@ -4,12 +4,13 @@ import { useState } from "react";
 import Link from "next/link";
 import { useInscricoes } from "@/hooks/useInscricoes";
 import { formatarMoeda, formatarData, LABEL_TIPO_QUARTO } from "@/lib/utils";
-import { Ban, Search, Pencil, Info } from "lucide-react";
+import { Ban, Search, Pencil, Info, MessageSquare, X } from "lucide-react";
 
 export default function CanceladosPage() {
   const { inscricoes, loading } = useInscricoes();
   const [busca, setBusca] = useState("");
   const [filtroQuarto, setFiltroQuarto] = useState("");
+  const [obsAberta, setObsAberta] = useState<{ nome: string; texto: string } | null>(null);
 
   if (loading) {
     return (
@@ -31,6 +32,30 @@ export default function CanceladosPage() {
 
   return (
     <div className="p-6 space-y-5">
+
+      {/* Modal de observação */}
+      {obsAberta && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          onClick={() => setObsAberta(null)}
+        >
+          <div
+            className="bg-white rounded-xl shadow-xl p-6 max-w-md w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Observação</p>
+                <h3 className="font-semibold text-gray-800">{obsAberta.nome}</h3>
+              </div>
+              <button onClick={() => setObsAberta(null)} className="text-gray-400 hover:text-gray-600 ml-4">
+                <X size={18} />
+              </button>
+            </div>
+            <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">{obsAberta.texto}</p>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="flex items-center gap-3">
         <Ban size={22} className="text-red-500" />
@@ -93,13 +118,14 @@ export default function CanceladosPage() {
                     <th className="text-right px-4 py-3 font-semibold text-gray-600">Total</th>
                     <th className="text-right px-4 py-3 font-semibold text-gray-600">Pago</th>
                     <th className="text-right px-4 py-3 font-semibold text-orange-600">Devolvido</th>
+                    <th className="text-center px-4 py-3 font-semibold text-gray-600">Obs.</th>
                     <th className="text-center px-4 py-3 font-semibold text-gray-600">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {filtrados.length === 0 && (
                     <tr>
-                      <td colSpan={9} className="text-center py-12 text-gray-400">
+                      <td colSpan={10} className="text-center py-12 text-gray-400">
                         Nenhum resultado para a busca.
                       </td>
                     </tr>
@@ -117,6 +143,19 @@ export default function CanceladosPage() {
                         {(ins.valorDevolvido || 0) > 0
                           ? formatarMoeda(ins.valorDevolvido || 0)
                           : <span className="text-gray-300 font-normal">—</span>}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {ins.observacoes ? (
+                          <button
+                            onClick={() => setObsAberta({ nome: ins.nome, texto: ins.observacoes! })}
+                            className="text-gray-400 hover:text-primary-600 transition-colors"
+                            title="Ver observação"
+                          >
+                            <MessageSquare size={15} />
+                          </button>
+                        ) : (
+                          <span className="text-gray-200">—</span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-center">
                         <Link href={`/inscritos/${ins.id}`} className="text-primary-600 hover:text-primary-800">
