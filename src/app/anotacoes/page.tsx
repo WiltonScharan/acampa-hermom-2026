@@ -116,10 +116,10 @@ function NotaCard({
         {isAdmin && (
           <button
             {...listeners}
-            className="flex-shrink-0 p-1 rounded text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing touch-none select-none"
+            className="flex-shrink-0 p-3 -mr-2 -mt-1 rounded-xl text-gray-300 hover:text-gray-500 hover:bg-black/5 cursor-grab active:cursor-grabbing touch-none select-none"
             title="Arrastar para reordenar"
           >
-            <GripVertical size={16} />
+            <GripVertical size={22} />
           </button>
         )}
       </div>
