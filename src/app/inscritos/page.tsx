@@ -67,6 +67,7 @@ export default function InscritosPage() {
   const [novoPagValor, setNovoPagValor] = useState("");
   const [novoPagData, setNovoPagData] = useState(() => new Date().toISOString().split("T")[0]);
   const [salvandoPag, setSalvandoPag] = useState(false);
+  const [sortPagDir, setSortPagDir] = useState<"asc" | "desc">("asc");
 
   // Modal devoluções
   const [modalDevInsId, setModalDevInsId] = useState<string | null>(null);
@@ -443,7 +444,22 @@ export default function InscritosPage() {
               </span>
             </div>
             <div className="px-6 py-4 max-h-60 overflow-y-auto space-y-2">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Histórico</p>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Histórico</p>
+                {(modalPagIns.historicoPagamentos || []).length > 1 && (
+                  <button
+                    onClick={() => setSortPagDir((d) => d === "asc" ? "desc" : "asc")}
+                    className="flex items-center gap-1 text-xs text-gray-400 hover:text-primary-600 transition-colors px-1.5 py-0.5 rounded hover:bg-gray-100"
+                    title={sortPagDir === "asc" ? "Mais recente primeiro" : "Mais antigo primeiro"}
+                  >
+                    {sortPagDir === "asc" ? (
+                      <><ChevronUp size={13} /><ChevronDown size={13} className="opacity-30" /><span>Antigo → Recente</span></>
+                    ) : (
+                      <><ChevronUp size={13} className="opacity-30" /><ChevronDown size={13} /><span>Recente → Antigo</span></>
+                    )}
+                  </button>
+                )}
+              </div>
               {saldoPagAnterior > 0 && (
                 <div className="flex items-center justify-between text-sm text-gray-400 bg-gray-50 px-3 py-2 rounded-lg border border-gray-100">
                   <span className="italic">Pagamentos anteriores (sem data)</span>
@@ -453,18 +469,25 @@ export default function InscritosPage() {
               {(modalPagIns.historicoPagamentos || []).length === 0 && saldoPagAnterior === 0 && (
                 <p className="text-sm text-gray-400 text-center py-6">Nenhum pagamento registrado.</p>
               )}
-              {(modalPagIns.historicoPagamentos || []).map((p, i) => (
-                <div key={i} className="flex items-center justify-between text-sm bg-green-50 px-3 py-2.5 rounded-lg border border-green-100">
-                  <span className="flex items-center gap-2 text-gray-600">
-                    <CalendarDays size={13} className="text-green-500 flex-shrink-0" />
-                    {p.data ? formatarData(p.data) : <span className="italic text-gray-400">sem data</span>}
-                  </span>
-                  <span className="flex items-center gap-3">
-                    <span className="font-semibold text-green-700">{formatarMoeda(p.valor)}</span>
-                    <button onClick={() => handleRemoverPagamento(modalPagIns, i, p.valor)} className="text-red-400 hover:text-red-600 p-0.5" title="Remover"><Trash2 size={13} /></button>
-                  </span>
-                </div>
-              ))}
+              {[...(modalPagIns.historicoPagamentos || [])]
+                .map((p, i) => ({ ...p, _idx: i }))
+                .sort((a, b) => {
+                  const da = a.data ?? "";
+                  const db = b.data ?? "";
+                  return sortPagDir === "asc" ? da.localeCompare(db) : db.localeCompare(da);
+                })
+                .map((p) => (
+                  <div key={p._idx} className="flex items-center justify-between text-sm bg-green-50 px-3 py-2.5 rounded-lg border border-green-100">
+                    <span className="flex items-center gap-2 text-gray-600">
+                      <CalendarDays size={13} className="text-green-500 flex-shrink-0" />
+                      {p.data ? formatarData(p.data) : <span className="italic text-gray-400">sem data</span>}
+                    </span>
+                    <span className="flex items-center gap-3">
+                      <span className="font-semibold text-green-700">{formatarMoeda(p.valor)}</span>
+                      <button onClick={() => handleRemoverPagamento(modalPagIns, p._idx, p.valor)} className="text-red-400 hover:text-red-600 p-0.5" title="Remover"><Trash2 size={13} /></button>
+                    </span>
+                  </div>
+                ))}
             </div>
             <div className="px-6 py-4 border-t bg-gray-50 space-y-3">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Registrar novo pagamento</p>
