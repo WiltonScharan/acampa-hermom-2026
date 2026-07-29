@@ -114,14 +114,22 @@ export interface Anotacao {
   titulo: string;
   conteudo: string;
   cor: string;
+  ordem?: number;
   criadoEm: import("firebase/firestore").Timestamp | null;
   atualizadoEm: import("firebase/firestore").Timestamp | null;
 }
 
 export function ouvirAnotacoes(callback: (items: Anotacao[]) => void) {
-  const q = query(collection(db, ANOTACOES), orderBy("criadoEm", "desc"));
-  return onSnapshot(q, (snapshot) => {
+  return onSnapshot(collection(db, ANOTACOES), (snapshot) => {
     const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Anotacao));
+    data.sort((a, b) => {
+      const aOrd = a.ordem ?? Infinity;
+      const bOrd = b.ordem ?? Infinity;
+      if (aOrd !== bOrd) return aOrd - bOrd;
+      const aTime = a.criadoEm?.toMillis() ?? 0;
+      const bTime = b.criadoEm?.toMillis() ?? 0;
+      return bTime - aTime;
+    });
     callback(data);
   });
 }
@@ -137,8 +145,17 @@ export async function criarAnotacao(): Promise<string> {
   return ref.id;
 }
 
-export async function atualizarAnotacao(id: string, dados: Partial<Pick<Anotacao, "titulo" | "conteudo" | "cor">>): Promise<void> {
+export async function atualizarAnotacao(
+  id: string,
+  dados: Partial<Pick<Anotacao, "titulo" | "conteudo" | "cor" | "ordem">>
+): Promise<void> {
   await updateDoc(doc(db, ANOTACOES, id), { ...dados, atualizadoEm: serverTimestamp() });
+}
+
+export async function salvarOrdemAnotacoes(notas: Anotacao[]): Promise<void> {
+  await Promise.all(
+    notas.map((nota, idx) => updateDoc(doc(db, ANOTACOES, nota.id), { ordem: idx }))
+  );
 }
 
 export async function excluirAnotacao(id: string): Promise<void> {

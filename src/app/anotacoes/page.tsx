@@ -1,9 +1,29 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ouvirAnotacoes, criarAnotacao, atualizarAnotacao, excluirAnotacao, Anotacao } from "@/lib/firestore";
-import { NotebookPen, Plus, Trash2, Check } from "lucide-react";
+import {
+  ouvirAnotacoes, criarAnotacao, atualizarAnotacao,
+  excluirAnotacao, salvarOrdemAnotacoes, Anotacao,
+} from "@/lib/firestore";
+import { NotebookPen, Plus, Trash2, Check, GripVertical } from "lucide-react";
 import { useRole } from "@/hooks/useRole";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  rectSortingStrategy,
+  useSortable,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 const CORES: { valor: string; bg: string; borda: string; titulo: string }[] = [
   { valor: "yellow",  bg: "bg-yellow-50",  borda: "border-yellow-300", titulo: "text-yellow-800" },
@@ -18,7 +38,22 @@ function corConfig(cor: string) {
   return CORES.find((c) => c.valor === cor) ?? CORES[0];
 }
 
-function NotaCard({ nota, onDelete, isAdmin }: { nota: Anotacao; onDelete: () => void; isAdmin: boolean }) {
+function colorHex(cor: string): string {
+  const map: Record<string, string> = {
+    yellow: "#fde68a", blue: "#93c5fd", green: "#86efac",
+    pink: "#f9a8d4", purple: "#c4b5fd", orange: "#fdba74",
+  };
+  return map[cor] ?? "#fde68a";
+}
+
+function NotaCard({
+  nota, onDelete, isAdmin,
+}: {
+  nota: Anotacao; onDelete: () => void; isAdmin: boolean;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: nota.id });
+
   const [titulo, setTitulo] = useState(nota.titulo);
   const [conteudo, setConteudo] = useState(nota.conteudo);
   const [cor, setCor] = useState(nota.cor || "yellow");
@@ -26,7 +61,6 @@ function NotaCard({ nota, onDelete, isAdmin }: { nota: Anotacao; onDelete: () =>
   const [salvo, setSalvo] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Sincroniza se a nota mudar externamente (onSnapshot)
   useEffect(() => { setTitulo(nota.titulo); }, [nota.titulo]);
   useEffect(() => { setConteudo(nota.conteudo); }, [nota.conteudo]);
   useEffect(() => { setCor(nota.cor); }, [nota.cor]);
@@ -49,21 +83,46 @@ function NotaCard({ nota, onDelete, isAdmin }: { nota: Anotacao; onDelete: () =>
 
   const cfg = corConfig(cor);
 
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 10 : undefined,
+  };
+
   return (
-    <div className={`rounded-2xl border ${cfg.bg} ${cfg.borda} p-4 flex flex-col gap-3 shadow-sm`}>
-      {/* Título */}
-      <input
-        type="text"
-        placeholder="Título..."
-        readOnly={!isAdmin}
-        className={`bg-transparent font-semibold text-base placeholder-opacity-50 outline-none border-none w-full ${cfg.titulo} ${!isAdmin ? "cursor-default select-text" : ""}`}
-        value={titulo}
-        onChange={(e) => {
-          if (!isAdmin) return;
-          setTitulo(e.target.value);
-          agendar({ titulo: e.target.value });
-        }}
-      />
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      className={`rounded-2xl border ${cfg.bg} ${cfg.borda} p-4 flex flex-col gap-3 shadow-sm ${
+        isDragging ? "shadow-2xl ring-2 ring-primary-300" : ""
+      }`}
+    >
+      {/* Título + alça de drag */}
+      <div className="flex items-start gap-1.5">
+        <input
+          type="text"
+          placeholder="Título..."
+          readOnly={!isAdmin}
+          className={`flex-1 min-w-0 bg-transparent font-semibold text-base outline-none border-none w-full ${cfg.titulo} ${!isAdmin ? "cursor-default select-text" : ""}`}
+          value={titulo}
+          onChange={(e) => {
+            if (!isAdmin) return;
+            setTitulo(e.target.value);
+            agendar({ titulo: e.target.value });
+          }}
+        />
+        {isAdmin && (
+          <button
+            {...listeners}
+            className="flex-shrink-0 p-1 rounded text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing touch-none select-none"
+            title="Arrastar para reordenar"
+          >
+            <GripVertical size={16} />
+          </button>
+        )}
+      </div>
 
       {/* Conteúdo */}
       <textarea
@@ -81,7 +140,6 @@ function NotaCard({ nota, onDelete, isAdmin }: { nota: Anotacao; onDelete: () =>
 
       {/* Rodapé */}
       <div className="flex items-center justify-between pt-1 border-t border-black/5">
-        {/* Seletor de cor */}
         {isAdmin ? (
           <div className="flex items-center gap-1.5">
             {CORES.map((c) => (
@@ -90,7 +148,7 @@ function NotaCard({ nota, onDelete, isAdmin }: { nota: Anotacao; onDelete: () =>
                 onClick={() => mudarCor(c.valor)}
                 className={`w-4 h-4 rounded-full border-2 transition-transform ${
                   cor === c.valor ? "scale-125 border-gray-500" : "border-transparent"
-                } bg-${c.valor}-300`}
+                }`}
                 style={{ backgroundColor: colorHex(c.valor) }}
                 title={c.valor}
               />
@@ -100,7 +158,6 @@ function NotaCard({ nota, onDelete, isAdmin }: { nota: Anotacao; onDelete: () =>
           <span />
         )}
 
-        {/* Status + Excluir */}
         <div className="flex items-center gap-3">
           {salvando && <span className="text-xs text-gray-400">Salvando...</span>}
           {salvo && !salvando && (
@@ -110,9 +167,7 @@ function NotaCard({ nota, onDelete, isAdmin }: { nota: Anotacao; onDelete: () =>
           )}
           {isAdmin && (
             <button
-              onClick={() => {
-                if (confirm("Excluir esta anotação?")) onDelete();
-              }}
+              onClick={() => { if (confirm("Excluir esta anotação?")) onDelete(); }}
               className="text-gray-400 hover:text-red-500 transition-colors"
               title="Excluir anotação"
             >
@@ -125,22 +180,11 @@ function NotaCard({ nota, onDelete, isAdmin }: { nota: Anotacao; onDelete: () =>
   );
 }
 
-function colorHex(cor: string): string {
-  const map: Record<string, string> = {
-    yellow: "#fde68a",
-    blue:   "#93c5fd",
-    green:  "#86efac",
-    pink:   "#f9a8d4",
-    purple: "#c4b5fd",
-    orange: "#fdba74",
-  };
-  return map[cor] ?? "#fde68a";
-}
-
 export default function AnotacoesPage() {
   const role = useRole();
   const isAdmin = role === "admin";
   const [anotacoes, setAnotacoes] = useState<Anotacao[]>([]);
+  const [notasOrdenadas, setNotasOrdenadas] = useState<Anotacao[]>([]);
   const [loading, setLoading] = useState(true);
   const [criando, setCriando] = useState(false);
 
@@ -151,6 +195,32 @@ export default function AnotacoesPage() {
     });
     return () => unsub();
   }, []);
+
+  // Sincroniza ordem local com Firestore (respeita arrastar)
+  useEffect(() => {
+    setNotasOrdenadas(anotacoes);
+  }, [anotacoes]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { delay: 200, tolerance: 5 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIdx = notasOrdenadas.findIndex((n) => n.id === active.id);
+    const newIdx = notasOrdenadas.findIndex((n) => n.id === over.id);
+    const novaOrdem = arrayMove(notasOrdenadas, oldIdx, newIdx);
+
+    setNotasOrdenadas(novaOrdem);
+    await salvarOrdemAnotacoes(novaOrdem);
+  }
 
   async function handleNova() {
     setCriando(true);
@@ -174,14 +244,14 @@ export default function AnotacoesPage() {
           <NotebookPen size={20} className="text-primary-600 flex-shrink-0" />
           <div>
             <h1 className="text-xl md:text-2xl font-bold text-gray-800">Anotações</h1>
-            <p className="text-sm text-gray-500">{anotacoes.length} anotação(ões)</p>
+            <p className="text-sm text-gray-500">{notasOrdenadas.length} anotação(ões)</p>
           </div>
         </div>
         {isAdmin && (
           <button
             onClick={handleNova}
             disabled={criando}
-            className="btn-primary flex items-center gap-2"
+            className="btn-primary flex items-center gap-2 flex-shrink-0"
           >
             <Plus size={16} />
             {criando ? "Criando..." : "Nova Anotação"}
@@ -189,24 +259,34 @@ export default function AnotacoesPage() {
         )}
       </div>
 
-      {anotacoes.length === 0 ? (
+      {notasOrdenadas.length === 0 ? (
         <div className="card text-center py-16 text-gray-400">
           <NotebookPen size={40} className="mx-auto mb-3 opacity-30" />
           <p className="text-lg font-medium">Nenhuma anotação ainda.</p>
           <p className="text-sm mt-1">Clique em <strong>Nova Anotação</strong> para começar.</p>
         </div>
       ) : (
-        <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4">
-          {anotacoes.map((nota) => (
-            <div key={nota.id} className="break-inside-avoid mb-4">
-              <NotaCard
-                nota={nota}
-                onDelete={() => excluirAnotacao(nota.id)}
-                isAdmin={isAdmin}
-              />
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={notasOrdenadas.map((n) => n.id)}
+            strategy={rectSortingStrategy}
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {notasOrdenadas.map((nota) => (
+                <NotaCard
+                  key={nota.id}
+                  nota={nota}
+                  onDelete={() => excluirAnotacao(nota.id)}
+                  isAdmin={isAdmin}
+                />
+              ))}
             </div>
-          ))}
-        </div>
+          </SortableContext>
+        </DndContext>
       )}
     </div>
   );
